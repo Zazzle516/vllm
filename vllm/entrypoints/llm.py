@@ -73,8 +73,10 @@ class LLM:
             or videos from directories specified by the server file system.
             This is a security risk. Should only be enabled in trusted
             environments.
+
         tensor_parallel_size: The number of GPUs to use for distributed
             execution with tensor parallelism.
+
         dtype: The data type for the model weights and activations. Currently,
             we support `float32`, `float16`, and `bfloat16`. If `auto`, we use
             the `torch_dtype` attribute specified in the model config file.
@@ -86,11 +88,15 @@ class LLM:
             model config file. If that is None, we assume the model weights are
             not quantized and use `dtype` to determine the data type of
             the weights.
+
+        # Q: 这里 model_version 和 token_version 是分开的 ??
         revision: The specific model version to use. It can be a branch name,
             a tag name, or a commit id.
         tokenizer_revision: The specific tokenizer version to use. It can be a
             branch name, a tag name, or a commit id.
+
         seed: The seed to initialize the random number generator for sampling.
+
         gpu_memory_utilization: The ratio (between 0 and 1) of GPU memory to
             reserve for the model weights, activations, and KV cache. Higher
             values will increase the KV cache size and thus improve the model's
@@ -100,12 +106,13 @@ class LLM:
             This can be used for temporarily storing the states of the requests
             when their `best_of` sampling parameters are larger than 1. If all
             requests will have `best_of=1`, you can safely set this to 0.
-            Noting that `best_of` is only supported in V0. Otherwise, too small
-            values may cause out-of-memory (OOM) errors.
+            Noting that `best_of` is only supported in **V0**. Otherwise, too small
+            values may cause out-of-memory (OOM) errors.    # 采样相关 => vllm/sampling_params.py
         cpu_offload_gb: The size (GiB) of CPU memory to use for offloading
             the model weights. This virtually increases the GPU memory space
             you can use to hold the model weights, at the cost of CPU-GPU data
             transfer for every forward pass.
+
         enforce_eager: Whether to enforce eager execution. If True, we will
             disable CUDA graph and always execute the model in eager mode.
             If False, we will use CUDA graph and eager execution in hybrid.
@@ -114,9 +121,12 @@ class LLM:
             to eager mode. Additionally for encoder-decoder models, if the
             sequence length of the encoder input is larger than this, we fall
             back to the eager mode.
+
+        # Q: 这个不理解，要结合文件再看
         disable_custom_all_reduce: See :class:`~vllm.config.ParallelConfig`
         disable_async_output_proc: Disable async output processing.
             This may result in lower performance.
+
         hf_token: The token to use as HTTP bearer authorization for remote files
             . If `True`, will use the token generated when running 
             `huggingface-cli login` (stored in `~/.huggingface`).
@@ -134,6 +144,7 @@ class LLM:
         serving, use the :class:`~vllm.AsyncLLMEngine` class instead.
     """
 
+    # DEPRECATE 因为在从 V0 到 V1 转向  所以老版本的 API 接口声明弃用
     DEPRECATE_LEGACY: ClassVar[bool] = True
     """A flag to toggle whether to deprecate the legacy generate/encode API."""
 
@@ -156,7 +167,7 @@ class LLM:
         start_index=2,  # Ignore self and model
         is_deprecated=lambda: LLM.DEPRECATE_INIT_POSARGS,
         additional_message=(
-            "All positional arguments other than `model` will be "
+            "Zazzle input argument test: All positional arguments other than `model` will be "
             "replaced with keyword arguments in an upcoming version."),
     )
     def __init__(

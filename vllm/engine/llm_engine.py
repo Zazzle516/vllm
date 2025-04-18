@@ -254,7 +254,7 @@ class LLMEngine:
         if not self.model_config.skip_tokenizer_init:
             self.tokenizer = self._init_tokenizer()
             self.detokenizer = Detokenizer(self.tokenizer)
-            tokenizer_group = self.get_tokenizer_group()
+            tokenizer_group = self.get_tokenizer_group()    # Q: tokenize_group 不理解
         else:
             self.tokenizer = None
             self.detokenizer = None
