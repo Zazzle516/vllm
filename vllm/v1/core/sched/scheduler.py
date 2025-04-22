@@ -165,6 +165,7 @@ class Scheduler(SchedulerInterface):
         scheduled_spec_decode_tokens: dict[str, list[int]] = {}
 
         # For logging.
+        print("zazzle scheduler v1 init logging start line_168")    # 启动了 18 次  Q: 目前不知道启动的次数和什么有关
         scheduled_timestamp = time.monotonic()
 
         # First, schedule the RUNNING requests.
@@ -769,6 +770,7 @@ class Scheduler(SchedulerInterface):
                 self.waiting.remove(request)
             request.status = finished_status
             self._free_request(request)
+            print("zazzle scheduler v1 finish_request line_773")        # 未调用
 
     def _free_request(self, request: Request) -> None:
         assert request.is_finished()

@@ -516,7 +516,7 @@ class LLMEngine:
 
         engine_cls = cls
         if envs.VLLM_USE_V1:
-            from vllm.v1.engine.llm_engine import LLMEngine as V1LLMEngine
+            from vllm.v1.engine.llm_engine import LLMEngine as V1LLMEngine      # 切换到 V1 版本执行
             engine_cls = V1LLMEngine
 
         return engine_cls.from_vllm_config(

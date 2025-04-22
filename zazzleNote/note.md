@@ -19,13 +19,16 @@
 ### EntryPoint
 
 #### LLM Class(offline)
+
 存储位置：`vllm/entrypoints/llm.py`
 
 #### API server(online)
+
 存储位置：`vllm/entrypoints/openai/api_server.py`
 调用 FastAPI 把 request 发送到后面的 engine
 
 ### engine
+
 真正在干活的 => llm_engine.py
 让 vLLM 拥有异步性 => async_llm_engine.py
 
@@ -34,9 +37,11 @@
 一个 token 就是一次 inference，而每个 step 放什么 request => Scheduler
 
 ### Scheduler
+
 core.scheduler.py
 
 ### KV Cache Manager
+
 core.block_manager.py
 
 **Prefix Caching**:
@@ -46,15 +51,18 @@ core.block_manager.py
 > Deepseek(MLA Multi-Layer-Attention optimization)    压缩版的 KV Cache 然后在 Attention 复原
 
 ### Worker
+
 针对到各种后端的具体执行，执行 Scheduler 的命令，包含各种 XPU 的后端去适配
 不涉及纯硬件的话 => worker_base.py & worker.py
 初始化 Model executor 的一系列变量和环境 eg. 分布式环境
 
 ### Model executor (Model runner)
+
 Worker 的底层，真正执行 Worker 的命令，和硬件层对接
 
 
 ### Modeling
+
 model_executor.models.llama.py  这个重点看  因为之前 llama 最主流所以设计的最规范
 
 Modeling 就是 Huggingface 上各种乱七八糟的模型写成 vLLM 能理解的，能优化的标准化模型
@@ -62,17 +70,15 @@ Modeling 就是 Huggingface 上各种乱七八糟的模型写成 vLLM 能理解�
 
 其中 llama.py 的 forward() 函数重点中的重点 line_265
 
-
 ### Attention Backend
+
 真正实现 attention 算子的地方  重点看这个: **attention.backends.flash_attn.py**
 在这个代码文件中  可以看到给 prefill 和 decode 配不同的 kernel Q: Prefill 阶段和 Decode 阶段是什么意思
 
 在 prefill 的过程中 调用 flash_attn_varlen_func()  不需要从 GPU 中读取任何 data 来完成 prefill
 而当需要从 GPU 中读取数据的时候 => flash_attn_with_kvcache (Page Memory)
 
-
 # Lecture 2
-
 
 ## Distruibuted Inference
 

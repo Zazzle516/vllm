@@ -89,6 +89,7 @@ class Worker(WorkerBase):
         allocator.wake_up(tags)
 
     def init_device(self):
+        print("zazzle init device v1 gpu_worker line_92")
         if self.device_config.device.type == "cuda":
             # torch.distributed.all_reduce does not free the input tensor until
             # the synchronization point. This causes the memory usage to grow

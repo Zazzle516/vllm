@@ -298,6 +298,7 @@ class Worker(LocalOrDistributedWorkerBase):
         self.cache_config.num_cpu_blocks = num_cpu_blocks
 
         if self.vllm_config.model_config.enable_sleep_mode:
+            print("zazzle vllm/worker/worker.py line_301")
             allocator = CuMemAllocator.get_instance()
             context = allocator.use_memory_pool(tag="kv_cache")
         else:

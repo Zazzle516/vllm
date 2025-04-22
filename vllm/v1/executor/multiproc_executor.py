@@ -274,6 +274,7 @@ class WorkerProc:
         distributed_init_method: str,
         input_shm_handle: Handle,
     ):
+        print("zazzle multiproc_executor WorkerProc line_277")
         self.rank = rank
         wrapper = WorkerWrapperBase(vllm_config=vllm_config, rpc_rank=rank)
         # TODO: move `init_worker` to executor level as a collective rpc call

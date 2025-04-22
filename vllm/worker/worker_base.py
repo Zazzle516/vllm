@@ -148,6 +148,7 @@ class DelegateWorkerBase(WorkerBase):
         self.worker = cls(*args, **kwargs)
 
     def init_device(self) -> None:
+        print("zazzle worker init_device line_151")
         self.worker.init_device()
 
     def determine_num_available_blocks(self) -> Tuple[int, int]:
@@ -381,6 +382,7 @@ class LocalOrDistributedWorkerBase(WorkerBase):
             return self._get_worker_input_from_broadcast()
 
     def get_model(self) -> nn.Module:
+        print("zazzle worker get_model line_385")
         return self.model_runner.get_model()
 
     def execute_model(

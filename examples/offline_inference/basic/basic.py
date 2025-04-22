@@ -15,7 +15,7 @@ sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 
 def main():
     # Create an LLM.
-    llm = LLM(model="facebook/opt-125m", dtype="bfloat16", swap_space=0)
+    llm = LLM(model="/home/ubuntuhx/xirui.hao/Models/deepseek-1.5B/DeepSeek-R1-Distill-Qwen-1.5B", dtype="bfloat16", swap_space=0)
     # Generate texts from the prompts.
     # The output is a list of RequestOutput objects
     # that contain the prompt, generated text, and other information.
