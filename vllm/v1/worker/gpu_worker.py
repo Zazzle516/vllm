@@ -42,7 +42,7 @@ class Worker(WorkerBase):
         distributed_init_method: str,
         is_driver_worker: bool = False,
     ):
-
+        print("zazzle vllm/v1/worker class Worker init line_45")
         super().__init__(vllm_config=vllm_config,
                          local_rank=local_rank,
                          rank=rank,
@@ -125,6 +125,7 @@ class Worker(WorkerBase):
     # FIXME(youkaichao & ywang96): Use TorchDispatchMode instead of memory pool
     # to hijack tensor allocation.
     def load_model(self) -> None:
+        print("zazzle vllm/v1/gpu_worker class Worker load_model line_128")
         if self.vllm_config.model_config.enable_sleep_mode:
             allocator = CuMemAllocator.get_instance()
             assert allocator.get_current_usage() == 0, (
@@ -135,6 +136,7 @@ class Worker(WorkerBase):
             from contextlib import nullcontext
             context = nullcontext()
         with context:
+            print("zazzle vllm/v1/gpu_worker class Worker load_model line_139")
             self.model_runner.load_model()
 
     @torch.inference_mode()

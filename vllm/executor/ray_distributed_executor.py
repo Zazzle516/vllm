@@ -156,6 +156,7 @@ class RayDistributedExecutor(DistributedExecutorBase):
 
     def _init_workers_ray(self, placement_group: "PlacementGroup",
                           **ray_remote_kwargs):
+        print("zazzle vllm/exector/ray_distributed_exector __init_worker_ray line_159")
         num_gpus = envs.VLLM_RAY_PER_WORKER_GPUS
 
         # The driver dummy worker does not actually use any resources.

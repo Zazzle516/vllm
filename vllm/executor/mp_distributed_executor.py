@@ -54,7 +54,7 @@ class MultiprocessingDistributedExecutor(DistributedExecutorBase):
             })
 
     def _init_executor(self) -> None:
-
+        print("zazzle vllm/executor/mp_distributed_exector.py _init_exector line_57")
         from vllm.platforms import current_platform
         if current_platform.is_cuda_alike():
             self._check_cuda()

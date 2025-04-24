@@ -86,6 +86,7 @@ class ExecutorWithExternalLauncher(UniProcExecutor):
     def _init_executor(self) -> None:
         """Initialize the worker and load the model.
         """
+        print("zazzle vllm/executor/uniproc_executor _init_executor line_89")
         assert self.vllm_config.parallel_config.pipeline_parallel_size == 1, \
             ("ExecutorWithExternalLauncher does not "
             "support pipeline parallelism.")

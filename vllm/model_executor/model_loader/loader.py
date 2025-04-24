@@ -68,6 +68,7 @@ from vllm.utils import is_pin_memory_available
 @contextmanager
 def device_loading_context(module: torch.nn.Module,
                            target_device: torch.device):
+    print("zazzle model_loader.loader.py line_71")  # 在 basic.py 的例子中出现了 114 次
     if target_device.type == "cpu":
         # If target is CPU, no need to move anything
         yield module
@@ -83,7 +84,7 @@ def device_loading_context(module: torch.nn.Module,
         # Parameters already on target device are not touched
 
     try:
-        yield module
+        yield module    # 等待 module 的传入
 
     finally:
         # Restore parameters to their original devices, ignoring new parameters
@@ -177,6 +178,7 @@ def _process_weights_after_loading(model: nn.Module, model_config: ModelConfig,
             # case where cpu offloading is used, where we will move the
             # parameters onto device for processing and back off after.
             with device_loading_context(module, target_device):
+                # 这个分支调用了 114 次 => 模型中有 114 个模块拥有量化方法
                 quant_method.process_weights_after_loading(module)
 
     # Currently only used by MLA.
@@ -194,6 +196,7 @@ class BaseModelLoader(ABC):
     """Base class for model loaders."""
 
     def __init__(self, load_config: LoadConfig):
+        print("zazzle loader.py BaseModelLoader line_198")
         self.load_config = load_config
 
     @abstractmethod
@@ -317,6 +320,7 @@ class DefaultModelLoader(BaseModelLoader):
                 ignore_patterns=self.load_config.ignore_patterns,
             )
         else:
+            print("zazzle DefaultModelLoader _prepare_weights line_322")
             hf_folder = model_name_or_path
 
         hf_weights_files: List[str] = []
@@ -370,6 +374,7 @@ class DefaultModelLoader(BaseModelLoader):
                 self.load_config.use_tqdm_on_load,
             )
         elif use_safetensors:
+            print("zazzle loader safetensors line_376")
             if self.load_config.load_format == LoadFormat.FASTSAFETENSORS:
                 weights_iterator = fastsafetensors_weights_iterator(
                     hf_weights_files,
@@ -469,7 +474,7 @@ class DefaultModelLoader(BaseModelLoader):
                         f"checkpoint: {weights_not_loaded}")
 
             _process_weights_after_loading(model, model_config, target_device)
-
+        print("zazzle loader.py load_model line_476")
         return model.eval()
 
 
