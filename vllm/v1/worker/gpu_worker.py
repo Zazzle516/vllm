@@ -43,6 +43,7 @@ class Worker(WorkerBase):
         is_driver_worker: bool = False,
     ):
         print("zazzle vllm/v1/worker class Worker init line_45")
+        # 在下方 super() 调用到 worker_base.py
         super().__init__(vllm_config=vllm_config,
                          local_rank=local_rank,
                          rank=rank,

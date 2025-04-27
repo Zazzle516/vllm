@@ -710,11 +710,12 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_MSGPACK_ZERO_COPY_THRESHOLD":
     lambda: int(os.getenv("VLLM_MSGPACK_ZERO_COPY_THRESHOLD", "256")),
 }
-
+print(len(environment_variables))
 # end-env-vars-definition
 
 
 def __getattr__(name: str):
+    # print("zazzle vllm/envs __getattr__ line_718: ", name)
     # lazy evaluation of environment variables
     if name in environment_variables:
         return environment_variables[name]()

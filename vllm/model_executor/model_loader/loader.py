@@ -68,7 +68,7 @@ from vllm.utils import is_pin_memory_available
 @contextmanager
 def device_loading_context(module: torch.nn.Module,
                            target_device: torch.device):
-    print("zazzle model_loader.loader.py line_71")  # 在 basic.py 的例子中出现了 114 次
+    # print("zazzle model_loader.loader.py line_71")  # 在 basic.py 的例子中出现了 114 次
     if target_device.type == "cpu":
         # If target is CPU, no need to move anything
         yield module

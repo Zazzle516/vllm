@@ -193,6 +193,7 @@ class InprocClient(EngineCoreClient):
     """
 
     def __init__(self, *args, **kwargs):
+        print("zazzle vllm/v1/engine core_clinet InprocClient line_196")
         self.engine_core = EngineCore(*args, **kwargs)
 
     def get_output(self) -> EngineCoreOutputs:

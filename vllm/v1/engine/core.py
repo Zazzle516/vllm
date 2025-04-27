@@ -60,6 +60,7 @@ class EngineCore:
         self.log_stats = log_stats
 
         # Setup Model.
+        # zazzle: In this case, use UniProcExecutor
         self.model_executor = executor_class(vllm_config)
         if executor_fail_callback is not None:
             self.model_executor.register_failure_callback(
@@ -109,6 +110,7 @@ class EngineCore:
         # schedule and execute batches, and is required by pipeline parallelism
         # to eliminate pipeline bubbles.
         self.batch_queue_size = self.model_executor.max_concurrent_batches
+        print("zazzle vllm/v1/engine core.py self.batch_queue_size line_113: ", self.batch_queue_size)
         self.batch_queue: Optional[queue.Queue[tuple[Future[ModelRunnerOutput],
                                                      SchedulerOutput]]] = None
         if self.batch_queue_size > 1:

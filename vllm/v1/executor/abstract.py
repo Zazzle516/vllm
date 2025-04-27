@@ -26,24 +26,30 @@ class Executor(ExecutorBase):
     @staticmethod
     def get_class(vllm_config: VllmConfig) -> type["Executor"]:
         executor_class: type[Executor]
+        print("zazzle vllm/v1/executor abstract Executor Class line_29")
         parallel_config = vllm_config.parallel_config
         distributed_executor_backend = (
             parallel_config.distributed_executor_backend)
         # distributed_executor_backend must be set in VllmConfig.__post_init__
         if isinstance(distributed_executor_backend, type):
+            print("zazzle vllm/v1/executor get_class distributed_executor_backend line_35")
             if not issubclass(distributed_executor_backend, ExecutorBase):
                 raise TypeError(
                     "distributed_executor_backend must be a subclass of "
                     f"ExecutorBase. Got {distributed_executor_backend}.")
             executor_class = distributed_executor_backend
         elif distributed_executor_backend == "ray":
+            print("zazzle vllm/v1/executor get_class ray line_42")
             from vllm.v1.executor.ray_distributed_executor import (  # noqa
                 RayDistributedExecutor)
             executor_class = RayDistributedExecutor
         elif distributed_executor_backend == "mp":
+            print("zazzle vllm/v1/executor get_class mp line_47")
             from vllm.v1.executor.multiproc_executor import MultiprocExecutor
             executor_class = MultiprocExecutor
         elif distributed_executor_backend == "uni":
+            # 执行这里!
+            print("zazzle vllm/v1/executor get_class uni line_52")
             executor_class = UniProcExecutor
         elif distributed_executor_backend == "external_launcher":
             # TODO: make v1 scheduling deterministic
@@ -83,6 +89,8 @@ class Executor(ExecutorBase):
         self,
         scheduler_output,
     ) -> Union[ModelRunnerOutput, Future[ModelRunnerOutput]]:
+        # zazzle 调用了 18 次 execute_model     Q: 目前不清楚这个 execute_model 的启动数量和什么相关
+        print("zazzle vllm/v1/executor execute_model line_87")
         output = self.collective_rpc("execute_model",
                                      args=(scheduler_output, ))
         return output[0]

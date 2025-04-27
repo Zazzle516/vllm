@@ -206,7 +206,7 @@ class LLM:
         Note: if enforce_eager is unset (enforce_eager is None)
         it defaults to False.
         '''
-
+        print("zazzle vll/entrypoints llm line_209")
         if "disable_log_stats" not in kwargs:
             kwargs["disable_log_stats"] = True
 
@@ -401,6 +401,7 @@ class LLM:
                                                GuidedDecodingRequest]] = None,
         priority: Optional[list[int]] = None,
     ) -> list[RequestOutput]:
+        print("zazzle vllm/entrypoints/llm.py LLM.generate line_404")
         """Generates the completions for the input prompts.
 
         This class automatically batches the given prompts, considering
