@@ -10,6 +10,7 @@ from vllm.distributed import get_tensor_model_parallel_rank
 from vllm.logger import init_logger
 from vllm.model_executor.utils import _make_synced_weight_loader
 
+# platform 已确定
 __all__ = [
     "BasevLLMParameter", "PackedvLLMParameter", "PerTensorScaleParameter",
     "ModelWeightParameter", "ChannelQuantScaleParameter",

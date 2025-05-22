@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 logger = init_logger(__name__)
 
-T = TypeVar('T', bound="BroadcastableModelInput")
+T = TypeVar('T', bound="BroadcastableModelInput")   # 把这个文件中出现的所有泛型 T 都绑定到这个 BroadcastableModelInput 类上
 
 
 def _add_attn_metadata_broadcastable_dict(

@@ -39,7 +39,6 @@ class WorkerBase:
         self,
         vllm_config: VllmConfig,
     ) -> None:
-        print("zazzle vllm/worker/worker_base __init__ line_42")
         self.vllm_config = vllm_config
         self.model_config = vllm_config.model_config
         self.cache_config = vllm_config.cache_config
@@ -87,7 +86,6 @@ class WorkerBase:
         You can stop the loop by executing a driver worker with an empty output.
         See `stop_remote_worker_execution_loop` for more details.
         """
-        print("zazzle vllm/worker/worker_base WorkerBase.start_worker_execution_loop line_90")
         with self.current_platform.inference_mode():
             while True:
                 output = self.execute_model(execute_model_req=None)

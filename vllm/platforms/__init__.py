@@ -248,7 +248,7 @@ def resolve_current_platform_cls_qualname() -> str:
 _current_platform = None
 _init_trace: str = ''
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:       # FALSE
     current_platform: Platform
 
 

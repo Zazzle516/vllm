@@ -259,7 +259,7 @@ def get_config(
         try:
             if is_gguf or file_or_path_exists(
                     model, HF_CONFIG_NAME, revision=revision):
-                config_format = ConfigFormat.HF
+                config_format = ConfigFormat.HF     # 进入针对 HF 的 config 处理再返回
             elif file_or_path_exists(model,
                                      MISTRAL_CONFIG_NAME,
                                      revision=revision):
@@ -291,7 +291,7 @@ def get_config(
             code_revision=code_revision,
             token=HF_TOKEN,
             **kwargs,
-        )
+        )   # 返回一个 dict 对象
 
         # Use custom model class if it's in our registry
         model_type = config_dict.get("model_type")
@@ -313,7 +313,7 @@ def get_config(
                     code_revision=code_revision,
                     token=HF_TOKEN,
                     **kwargs,
-                )
+                )       # Qwen2Config
             except ValueError as e:
                 if (not trust_remote_code
                         and "requires you to execute the configuration file"
@@ -330,6 +330,7 @@ def get_config(
 
     elif config_format == ConfigFormat.MISTRAL:
         config = load_params_config(model, revision, token=HF_TOKEN, **kwargs)
+
     else:
         supported_formats = [
             fmt.value for fmt in ConfigFormat if fmt != ConfigFormat.AUTO
@@ -550,7 +551,7 @@ def get_sentence_transformer_tokenizer_config(model: str,
                     break
 
     if not encoder_dict:
-        return None
+        return None     # 针对 DeepSeek-R1-Distill-Qwen-1.5B 并没有对应的 config 文件
 
     logger.info("Found sentence-transformers tokenize configuration.")
 

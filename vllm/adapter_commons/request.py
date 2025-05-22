@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-
+# 强制子类实现某些接口，防止不完整的继承
 class AdapterRequest(ABC):
     """
     Base class for adapter requests.

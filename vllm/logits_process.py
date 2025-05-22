@@ -6,6 +6,10 @@ import torch
 
 from vllm.transformers_utils.tokenizer import AnyTokenizer, MistralTokenizer
 
+# 函数类型别名  方便后面复用  只要满足 param1=list[int] param2=torch.Tensor ret=torch.Tensor
+# 在传参的时候，就不用写这一大串，直接用 LogitsProcessor 就可以
+# Callable[param1=list[int], param2=torch.Tensor -> torch.Tensor]
+# Callable[param1=list[int], param2=list[int]-> torch.Tensor] 
 LogitsProcessor = Union[Callable[[list[int], torch.Tensor], torch.Tensor],
                         Callable[[list[int], list[int], torch.Tensor],
                                  torch.Tensor]]
@@ -15,7 +19,7 @@ for the next token and, optionally, prompt tokens as a
 first argument, and returns a modified tensor of logits
 to sample from."""
 
-
+# 在模型 sampling 阶段抑制这些序列的生成    eg. 一些骂人 or 歧视的词汇
 def get_bad_words_logits_processors(
         bad_words: list[str],
         tokenizer: AnyTokenizer) -> list[LogitsProcessor]:

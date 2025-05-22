@@ -223,7 +223,7 @@ class _MultiModalCounts(UserDict[str, int]):
 InputProcessor = Callable[[InputContext, ProcessorInputs], ProcessorInputs]
 """Preprocess the inputs to the model."""
 
-
+# 为不同模型动态提供 profiling 所需的 DummyData 构造器 和 推理时输入预处理器
 class InputRegistry:
     """
     A registry to dispatch data processing
@@ -238,6 +238,7 @@ class InputRegistry:
         self._input_processors_by_model_type = \
             ClassRegistry[nn.Module, InputProcessor]()
 
+# Dedoer Only   eg. GPT..
     def _default_dummy_data_factory(
         self,
         ctx: InputContext,
@@ -281,8 +282,9 @@ class InputRegistry:
 
     def _get_dummy_data_factory(self, model_cls: type[nn.Module]):
         return self._dummy_factories_by_model_type \
-            .get(model_cls, self._default_dummy_data_factory)
+            .get(model_cls, self._default_dummy_data_factory)       # ClassRegistry 作为 Dict 提供的默认 get() 方法
 
+# Encoder Only
     def register_dummy_encoder_data(self, factory: DummyDataFactory):
         """
         Register a dummy encoder data factory to a model class
@@ -308,12 +310,13 @@ class InputRegistry:
         return self._dummy_encoder_factories_by_model_type \
             .get(model_cls, self._default_dummy_data_factory)
 
+# 根据是否多模态、是否 encoder-only 模型，自动选择对应的 DummyData 构造逻辑
     def dummy_data_for_profiling(
         self,
         model_config: "ModelConfig",
         seq_len: int,
-        mm_registry: "MultiModalRegistry",
-        is_encoder_data: bool = False,
+        mm_registry: "MultiModalRegistry",          # 针对多模态的注册器
+        is_encoder_data: bool = False,              # 判断 Encoder-Only
     ) -> DummyData:
         """
         Create dummy data for profiling the memory usage of a model.
@@ -390,6 +393,7 @@ class InputRegistry:
 
         return dummy_data
 
+# Real Inference: input_processor 用于在推理前的结构补全，转换，针对图像，辅助信息
     def _default_input_processor(
         self,
         ctx: InputContext,
@@ -418,7 +422,7 @@ class InputRegistry:
 
             self._input_processors_by_model_type[model_cls] = processor
 
-            return model_cls
+            return model_cls    # 判断该模型类是否已经注册过 input_processor
 
         return wrapper
 
@@ -426,16 +430,17 @@ class InputRegistry:
         return self._input_processors_by_model_type \
             .get(model_cls, self._default_input_processor)
 
+# 确保相关参数被放在正确的字段（无论是否是多模态 vllm 会统一处理
     def _ensure_mm_kwargs(
         self,
         inputs: SingletonInputs,
         mm_processor_kwargs: dict[str, Any],
     ):
-        if inputs["type"] == "token":
+        if inputs["type"] == "token":                   # 纯文本情况
             # In case the input processor for that model fails to set it
             if "mm_processor_kwargs" not in inputs:
                 inputs["mm_processor_kwargs"] = mm_processor_kwargs
-        elif inputs["type"] == "multimodal":
+        elif inputs["type"] == "multimodal":            # 多模态情况
             # Be more strict in V2
             assert "mm_kwargs" in inputs
         else:
@@ -471,6 +476,8 @@ class InputRegistry:
             **mm_processor_kwargs,
         )
 
+        # 通过这里自动适配传入的模型类型    Decoder-only   Encoder-only     Decoder-Encoder
+        # 此时 mm_processor_kwargs 是否为 NULL 不确定的  但是 vllm 都提供了处理
         encoder_inputs, decoder_inputs = split_enc_dec_inputs(processed_inputs)
         if encoder_inputs is not None:
             self._ensure_mm_kwargs(encoder_inputs, mm_processor_kwargs)
@@ -484,4 +491,6 @@ class InputRegistry:
         Create an input processor (see :meth:`_process_input`) for a
         specific model.
         """
+        # 通过 partial 绑定 model_config 参数  返回的仍然是 Callable 函数
+        # 从设计角度看  有很高的复用率
         return functools.partial(self.process_input, model_config)

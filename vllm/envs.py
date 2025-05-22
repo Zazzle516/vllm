@@ -710,7 +710,7 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_MSGPACK_ZERO_COPY_THRESHOLD":
     lambda: int(os.getenv("VLLM_MSGPACK_ZERO_COPY_THRESHOLD", "256")),
 }
-print(len(environment_variables))
+print("zazzle vllm/envs.py environment_variables: ", len(environment_variables))
 # end-env-vars-definition
 
 

@@ -333,6 +333,8 @@ class RequestOutput:
 _O = TypeVar("_O", default=PoolingOutput)
 
 
+# PoolingRequest: vLLM 中用于执行embedding 类型任务的请求  返回 hidden states  而不是一般的 token 结果
+# 语义搜索、文本匹配、检索增强
 class PoolingRequestOutput(Generic[_O]):
     """
     The output data of a pooling request to the LLM.

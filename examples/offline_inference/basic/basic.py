@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-print("zazzle start import")
-from vllm import LLM, SamplingParams
+print("zazzle start import LLM")
+from vllm import LLM
+print("zazzle after import LLM start import SamplingParams")
+from vllm import SamplingParams
 
 print("zazzle after import start SamplingParams")
 # Sample prompts.

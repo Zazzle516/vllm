@@ -159,13 +159,13 @@ class LLM:
     def deprecate_legacy_api(cls):
         cls.DEPRECATE_LEGACY = True
 
-        yield
+        yield   # 分割 with 块进入和退出时执行的逻辑
 
         cls.DEPRECATE_LEGACY = False
 
     @deprecate_args(
         start_index=2,  # Ignore self and model
-        is_deprecated=lambda: LLM.DEPRECATE_INIT_POSARGS,
+        is_deprecated=lambda: LLM.DEPRECATE_INIT_POSARGS,   # 传入访问该变量的函数  可以在运行的时候动态变化
         additional_message=(
             "Zazzle input argument test: All positional arguments other than `model` will be "
             "replaced with keyword arguments in an upcoming version."),
@@ -226,6 +226,7 @@ class LLM:
         else:
             compilation_config_instance = None
 
+        # 
         engine_args = EngineArgs(
             model=model,
             task=task,
@@ -257,7 +258,7 @@ class LLM:
 
         # Create the Engine (autoselects V0 vs V1)
         self.llm_engine = LLMEngine.from_engine_args(
-            engine_args=engine_args, usage_context=UsageContext.LLM_CLASS)
+            engine_args=engine_args, usage_context=UsageContext.LLM_CLASS)  # 表示当前通过 LLM_CALSS 直接调用 vLLM
         self.engine_class = type(self.llm_engine)
 
         self.request_counter = Counter()

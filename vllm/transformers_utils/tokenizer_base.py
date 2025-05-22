@@ -123,6 +123,7 @@ class TokenizerBase(ABC):
         raise NotImplementedError()
 
 
+# 用 str 注册，再通过 importlib 名称查找
 class TokenizerRegistry:
     # Tokenizer name -> (tokenizer module, tokenizer class)
     REGISTRY: Dict[str, Tuple[str, str]] = {}

@@ -21,7 +21,7 @@ from vllm.pooling_params import PoolingParams
 from vllm.prompt_adapter.request import PromptAdapterRequest
 from vllm.sampling_params import RequestOutputKind, SamplingParams
 
-VLLM_TOKEN_ID_ARRAY_TYPE = "l"
+VLLM_TOKEN_ID_ARRAY_TYPE = "l"  # signed long 整型
 
 VLLM_INVALID_TOKEN_ID = -1
 
@@ -1303,6 +1303,7 @@ class ExecuteModelRequest(
     # The sequence group metadata list.
     seq_group_metadata_list: list[Union[SequenceGroupMetadata,
                                         SequenceGroupMetadataDelta]]
+
     # Blocks to swap in. List of CPU -> GPU block number.
     blocks_to_swap_in: list[tuple[int,
                                   int]] = msgspec.field(default_factory=list)
@@ -1311,12 +1312,14 @@ class ExecuteModelRequest(
                                    int]] = msgspec.field(default_factory=list)
     # Blocks to copy. Source to dest block.
     blocks_to_copy: list[tuple[int, int]] = msgspec.field(default_factory=list)
+
     # Virtual engine ID for pipeline parallel.
     virtual_engine: int = 0
-    # The number of slots for lookahead decoding.
+    # The number of slots for lookahead decoding.   // eg. 目标生成 token 长度 - 已生成的 token 数量 => 未来预留的 token 数量空间
     num_lookahead_slots: int = 0
-    # The number of requests in the running queue.
+    # The number of requests in the running queue.  // 当前 worker 上待处理的 Batch 数量
     running_queue_size: int = 0
+
     # Optional hidden states from prior step.
     previous_hidden_states: Optional[HiddenStates] = None
     # The number of forward steps to run.

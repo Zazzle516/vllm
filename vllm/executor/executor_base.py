@@ -65,7 +65,7 @@ class ExecutorBase(ABC):
                        kwargs: Optional[Dict[str, Any]] = None) -> List[_R]:
         """
         Execute an RPC call on all workers.
-
+        对所有 worker 统一执行一个远程方法调用(RPC), 并收集每个 worker 的返回结果
         Args:
             method: Name of the worker method to execute, or a callable that
                 is serialized and sent to all workers to execute.

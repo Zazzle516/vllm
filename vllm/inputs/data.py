@@ -230,7 +230,7 @@ class EncoderDecoderInputs(TypedDict):
     decoder: Union[TokenInputs, "MultiModalInputs"]
     """The inputs for the decoder portion."""
 
-
+# 每条请求在进入 KV cache 编排和模型推理前的标准输入格式
 SingletonInputs = Union[TokenInputs, "MultiModalInputs"]
 """
 A processed :class:`SingletonPrompt` which can be passed to

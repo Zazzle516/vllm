@@ -15,6 +15,8 @@ from vllm.utils import import_from_path, is_list_of
 logger = init_logger(__name__)
 
 
+# 非流式: 在 Decoding 结束后  从 Decoding Output 中提取部分作为模型的 Reasoning 结果输出
+# 流式: 在 Decoding 生成的同时  从已经生成的部分提取
 class ReasoningParser:
     """
     Abstract reasoning parser class that should not be used directly.
@@ -32,6 +34,7 @@ class ReasoningParser:
         # whereas all tokenizers have .get_vocab()
         return self.model_tokenizer.get_vocab()
 
+    # 当前是否已经从思考过程过渡到回答部分
     @abstractmethod
     def is_reasoning_end(self, input_ids: list[int]) -> bool:
         """
@@ -49,6 +52,7 @@ class ReasoningParser:
             True if the reasoning content ends in the input_ids.
         """
 
+    # 在 Reasoning 结束后  提取答案对应的 token idx
     @abstractmethod
     def extract_content_ids(self, input_ids: list[int]) -> list[int]:
         """
@@ -61,6 +65,7 @@ class ReasoningParser:
             The extracted content from the input_ids.
         """
 
+    # 在 Decoding 阶段彻底完成的情况下  提取 Reasoning 和 Content
     @abstractmethod
     def extract_reasoning_content(
             self, model_output: str, request: ChatCompletionRequest
@@ -83,6 +88,7 @@ class ReasoningParser:
             A tuple containing the reasoning content and the content.
         """
 
+    # 在流式 Decoding 的环境下  随着每次 Delta 的增加提取
     @abstractmethod
     def extract_reasoning_content_streaming(
         self,
@@ -103,8 +109,10 @@ class ReasoningParser:
 
 
 class ReasoningParserManager:
+    # 注册表
     reasoning_parsers: dict[str, type] = {}
 
+    # 尝试获取目前已经注册 ReasoningParser 的具体实例
     @classmethod
     def get_reasoning_parser(cls, name) -> type:
         """
@@ -118,6 +126,7 @@ class ReasoningParserManager:
         raise KeyError(
             f"reasoning helper: '{name}' not found in reasoning_parsers")
 
+    # 自定义 parser 名称(可以有多个名称)  更新注册表
     @classmethod
     def _register_module(
         cls,
@@ -132,6 +141,9 @@ class ReasoningParserManager:
             module_name = module.__name__
         if isinstance(module_name, str):
             module_name = [module_name]
+
+        # 如果传入的注册名已存在
+        # force==True 默认进行覆盖 ; force==False 抛出 KeyError
         for name in module_name:
             if not force and name in cls.reasoning_parsers:
                 existed_module = cls.reasoning_parsers[name]
@@ -139,6 +151,7 @@ class ReasoningParserManager:
                                f"at {existed_module.__module__}")
             cls.reasoning_parsers[name] = module
 
+    # 支持函数式注册和装饰器注册
     @classmethod
     def register_module(
         cls,

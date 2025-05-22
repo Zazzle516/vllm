@@ -254,10 +254,11 @@ class EngineArgs:
     enable_reasoning: Optional[bool] = None
     reasoning_parser: Optional[str] = None
     use_tqdm_on_load: bool = LoadConfig.use_tqdm_on_load
+    zazzle_test: bool = True
 
     def __post_init__(self):
         if not self.tokenizer:
-            self.tokenizer = self.model
+            self.tokenizer = self.model     # 模型绝对路径字符串
 
         # support `EngineArgs(compilation_config={...})`
         # without having to manually construct a
@@ -1050,7 +1051,7 @@ class EngineArgs:
     def create_model_config(self) -> ModelConfig:
         # gguf file needs a specific model loader and doesn't use hf_repo
         if check_gguf_file(self.model):
-            self.quantization = self.load_format = "gguf"
+            self.quantization = self.load_format = "gguf"       # 判断是否是一个量化模型
 
         # NOTE: This is to allow model loading from S3 in CI
         if (not isinstance(self, AsyncEngineArgs) and envs.VLLM_CI_USE_S3
@@ -1100,6 +1101,7 @@ class EngineArgs:
             model_impl=self.model_impl,
         )
 
+    # 无论模型是否涉及量化  都会被调用  直接生成 LoadConfig 实例
     def create_load_config(self) -> LoadConfig:
 
         if(self.qlora_adapter_name_or_path is not None) and \
@@ -1115,7 +1117,7 @@ class EngineArgs:
             download_dir=self.download_dir,
             model_loader_extra_config=self.model_loader_extra_config,
             ignore_patterns=self.ignore_patterns,
-            use_tqdm_on_load=self.use_tqdm_on_load,
+            use_tqdm_on_load=self.use_tqdm_on_load,     # 是否加载进度条
         )
 
     def create_speculative_config(
@@ -1167,8 +1169,9 @@ class EngineArgs:
         If VLLM_USE_V1 is specified by the user but the VllmConfig
         is incompatible, we raise an error.
         """
+        print("zazzle vllm/engine/arg_utils.py line1172 create_engine_config")
         from vllm.platforms import current_platform
-        current_platform.pre_register_and_update()
+        current_platform.pre_register_and_update()      # pass 你可以自定义
 
         device_config = DeviceConfig(device=self.device)
         model_config = self.create_model_config()

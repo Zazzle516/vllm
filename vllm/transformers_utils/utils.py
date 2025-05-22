@@ -18,7 +18,7 @@ def is_s3(model_or_path: str) -> bool:
 
 def check_gguf_file(model: Union[str, PathLike]) -> bool:
     """Check if the file is a GGUF model."""
-    model = Path(model)
+    model = Path(model)     # 创建一个路径对象 但是不会真的访问文件
     if not model.is_file():
         return False
     elif model.suffix == ".gguf":

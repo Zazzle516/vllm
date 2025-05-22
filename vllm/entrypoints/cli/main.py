@@ -28,6 +28,7 @@ def register_signal_handlers():
 
 
 def main():
+    print("zazzle vllm/entrypoints/cli main line_31")
     cli_env_setup()
 
     parser = FlexibleArgumentParser(description="vLLM CLI")

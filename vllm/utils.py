@@ -422,7 +422,7 @@ class LRUCache(cachetools.LRUCache[_K, _V], Generic[_K, _V]):
         self._total = 0
         self._last_info = CacheInfo(hits=0, total=0)
 
-
+# 减少 Python 对象频繁分配与销毁的性能开销
 class PyObjectCache:
     """Used to cache python objects to avoid object allocations
     across scheduler iterations.
@@ -434,7 +434,7 @@ class PyObjectCache:
 
         self._obj_cache = []
         for _ in range(128):
-            self._obj_cache.append(self._obj_builder())
+            self._obj_cache.append(self._obj_builder())     # 提前创建好 128 个对象  尽可能复用
 
     def _grow_cache(self):
         # Double the size of the cache
@@ -946,6 +946,7 @@ def get_dtype_size(dtype: torch.dtype) -> int:
 
 
 # `collections` helpers
+# 如果是 first 那么首先判断当前传入的 value 是否只有一个元素，那么这一个元素是否是目标类型; 如果是 all 那么默认传入的 value 是一个 list，那么需要判断这个 list 中的每个元素的类型
 def is_list_of(
     value: object,
     typ: Union[type[T], tuple[type[T], ...]],
@@ -1112,14 +1113,14 @@ F = TypeVar('F', bound=Callable[..., Any])
 
 def deprecate_args(
     start_index: int,
-    is_deprecated: Union[bool, Callable[[], bool]] = True,
+    is_deprecated: Union[bool, Callable[[], bool]] = True,      # lambda: LLM.DEPRECATE_INIT_POSARGS
     additional_message: Optional[str] = None,
 ) -> Callable[[F], F]:
 
     if not callable(is_deprecated):
         is_deprecated = partial(identity, is_deprecated)
 
-    def wrapper(fn: F) -> F:
+    def wrapper(fn: F) -> F:        # 传入 LLM.init 作为 fn 参数
 
         params = inspect.signature(fn).parameters
         pos_types = (
@@ -1131,7 +1132,8 @@ def deprecate_args(
         ]
 
         @wraps(fn)
-        def inner(*args, **kwargs):
+        def inner(*args, **kwargs):     # 这里用 inner 的可变数量参数去接收 init 本身的参数（就是高阶一层层传参的那套
+            # 这里判断每一个参数是否被弃用了
             if is_deprecated():
                 deprecated_args = pos_kws[start_index:len(args)]
                 if deprecated_args:
@@ -1146,7 +1148,7 @@ def deprecate_args(
                         stacklevel=3,  # The inner function takes up one level
                     )
 
-            return fn(*args, **kwargs)
+            return fn(*args, **kwargs)      # 开始正式构造 LLM 实例
 
         return inner  # type: ignore
 
@@ -1759,6 +1761,7 @@ def import_from_path(module_name: str, file_path: Union[str, os.PathLike]):
     Based on the official recipe:
     https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
     """
+    print("zazzle vllm/utils.py import_from_path: ", module_name)
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None:
         raise ModuleNotFoundError(f"No module named '{module_name}'")
@@ -2036,6 +2039,7 @@ def direct_register_custom_op(
             "the required dependencies.")
         return
 
+    # 推断 op_func 的输入输出签名 (根据 pytorch 不同版本有不同的 API)
     import torch.library
     if hasattr(torch.library, "infer_schema"):
         schema_str = torch.library.infer_schema(op_func,
@@ -2044,9 +2048,13 @@ def direct_register_custom_op(
         # for pytorch 2.4
         import torch._custom_op.impl
         schema_str = torch._custom_op.impl.infer_schema(op_func, mutates_args)
+
+    # 注册到 Lib 中
     my_lib = target_lib or vllm_lib
     my_lib.define(op_name + schema_str, tags=tags)
     my_lib.impl(op_name, op_func, dispatch_key=dispatch_key)
+
+    # 针对测试
     if fake_impl is not None:
         my_lib._register_fake(op_name, fake_impl)
 

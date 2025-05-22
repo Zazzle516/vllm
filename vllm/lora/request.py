@@ -7,7 +7,7 @@ import msgspec
 
 from vllm.adapter_commons.request import AdapterRequest
 
-
+# Q: 看看后续和 LoRAManager 的调用关系
 class LoRARequest(
         msgspec.Struct,
         omit_defaults=True,  # type: ignore[call-arg]

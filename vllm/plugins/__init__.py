@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 plugins_loaded = False
 
 
-def load_plugins_by_group(group: str) -> Dict[str, Callable]:
+def load_plugins_by_group(group: str) -> Dict[str, Callable]:       # group: vllm.general_plugins
     import sys
     if sys.version_info < (3, 10):
         from importlib_metadata import entry_points
@@ -23,7 +23,7 @@ def load_plugins_by_group(group: str) -> Dict[str, Callable]:
 
     allowed_plugins = envs.VLLM_PLUGINS
 
-    discovered_plugins = entry_points(group=group)
+    discovered_plugins = entry_points(group=group)      # 获取当前环境中所有包注册的插件接口入口点
     if len(discovered_plugins) == 0:
         logger.debug("No plugins for group %s found.", group)
         return {}
@@ -52,9 +52,9 @@ def load_general_plugins():
     processes. They should be designed in a way that they can be loaded
     multiple times without causing issues.
     """
-    global plugins_loaded
+    global plugins_loaded   # 函数中引用的是全局作用域里的变量，不是创建新的局部变量  默认 Flase 加载一次后设为 True
     if plugins_loaded:
-        return
+        return      # 如果发现已经加载过  那么直接返回就好了
     plugins_loaded = True
 
     # some platform-specific configurations
@@ -76,6 +76,7 @@ def load_general_plugins():
             # see https://docs.habana.ai/en/latest/PyTorch/Inference_on_PyTorch/Inference_Using_HPU_Graphs.html # noqa: E501
             os.environ['PT_HPU_ENABLE_LAZY_COLLECTIVES'] = 'true'
 
+    # CUDA Branch
     plugins = load_plugins_by_group(group='vllm.general_plugins')
     # general plugins, we only need to execute the loaded functions
     for func in plugins.values():

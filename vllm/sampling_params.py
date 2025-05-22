@@ -86,6 +86,8 @@ class GuidedDecodingParams:
 
     def __post_init__(self):
         """Validate that some fields are mutually exclusive."""
+        # 被 dataclass 修饰的类会自动生成 __init__ 方法，那么在执行 __init__ 后
+        # 还可以通过 __post_init__ 进行一些自定义逻辑的执行，__post_init__ 会自动被调用
         guide_count = sum([
             self.json is not None, self.regex is not None, self.choice
             is not None, self.grammar is not None, self.json_object is not None

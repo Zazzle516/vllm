@@ -462,10 +462,10 @@ class ModelConfig:
         self.hf_text_config = get_hf_text_config(self.hf_config)
         self.attention_chunk_size = getattr(self.hf_text_config,
                                             "attention_chunk_size", None)
-        self.encoder_config = self._get_encoder_config()
+        self.encoder_config = self._get_encoder_config()    # None
         self.hf_image_processor_config = get_hf_image_processor_config(
             self.model, hf_token=hf_token, revision=revision)
-        self.dtype = _get_and_verify_dtype(self.hf_config, dtype)
+        self.dtype = _get_and_verify_dtype(self.hf_config, dtype)   # 把传入的类型 str 转换为 torch.dtype
         self.use_async_output_proc = use_async_output_proc
         self.mm_processor_kwargs = mm_processor_kwargs
         self.disable_mm_preprocessor_cache = disable_mm_preprocessor_cache
@@ -509,13 +509,13 @@ class ModelConfig:
             disable_sliding_window=self.disable_sliding_window,
             sliding_window_len=self.get_hf_config_sliding_window(),
             spec_target_max_model_len=spec_target_max_model_len,
-            encoder_config=self.encoder_config)
+            encoder_config=self.encoder_config)     # 获取 hf_config.max_position_embeddings 并验证最大长度的合法性
         self.served_model_name = get_served_model_name(model,
-                                                       served_model_name)
+                                                       served_model_name)   # 可能同时部署多个模型 str | list
         self.multimodal_config = self._init_multimodal_config(
-            limit_mm_per_prompt)
+            limit_mm_per_prompt)                    # 判断是否支持多模态输入
         if not self.skip_tokenizer_init:
-            self._verify_tokenizer_mode()
+            self._verify_tokenizer_mode()           # Q: 目前不知道 tokenizer_mode 对后续的 tokenizer 是怎么影响的
 
         self.is_attention_free = self._init_attention_free()
         self.is_hybrid = self._init_is_hybrid()
@@ -637,7 +637,7 @@ class ModelConfig:
 
     def _verify_tokenizer_mode(self) -> None:
         tokenizer_mode = self.tokenizer_mode.lower()
-        if tokenizer_mode not in ["auto", "slow", "mistral", "custom"]:
+        if tokenizer_mode not in ["auto", "slow", "mistral", "custom"]:     # auto: Rust Fast Tokenizer ; slow: Python Slow Tokenizer ; mistral: 针对 llama 特殊优化 ; custom: 用户自定义
             raise ValueError(
                 f"Unknown tokenizer mode: {self.tokenizer_mode}. Must be "
                 "either 'auto', 'slow', 'mistral' or 'custom'.")
@@ -2949,7 +2949,7 @@ def _get_and_verify_max_len(
     derived_max_model_len = float("inf")
     possible_keys = [
         # OPT
-        "max_position_embeddings",
+        "max_position_embeddings",  # 一般默认是这个名称  从 hf_config 中获取
         # GPT-2
         "n_positions",
         # MPT
@@ -3069,7 +3069,7 @@ def _get_and_verify_max_len(
                 raise ValueError(
                     f"{msg} To allow overriding this maximum, set "
                     "the env var VLLM_ALLOW_LONG_MAX_MODEL_LEN=1")
-    return int(max_model_len)
+    return int(max_model_len)       # 131072
 
 
 def get_min_sliding_window(
@@ -3508,6 +3508,7 @@ class CompilationConfig(BaseModel):
             self.splitting_ops = []
 
         for k, v in self.inductor_passes.items():
+            print("zazzle vllm/config ComilationConfig line_3511 v: ", v)
             if not isinstance(v, str):
                 assert callable(v), (
                     f"pass {k} should be callable or a qualified name")
@@ -3615,7 +3616,7 @@ class VllmConfig:
     """Dataclass which contains all vllm-related configuration. This
     simplifies passing around the distinct configurations in the codebase.
     """
-
+    # Python.field() 传入 default_factory 如果是一个类  那么每次在调用 VllmConfig 的时候都会自动创建该类的实例
     model_config: ModelConfig = field(default=None, init=True)  # type: ignore
     cache_config: CacheConfig = field(default=None, init=True)  # type: ignore
     parallel_config: ParallelConfig = field(default_factory=ParallelConfig,

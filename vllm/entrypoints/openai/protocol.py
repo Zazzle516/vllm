@@ -1332,7 +1332,7 @@ class ChatCompletionResponse(OpenAIBaseModel):
     prompt_logprobs: Optional[list[Optional[dict[int, Logprob]]]] = None
 
 
-class DeltaMessage(OpenAIBaseModel):
+class DeltaMessage(OpenAIBaseModel):        # 一个流式生成中的部分消息变更内容 通过拼接多个 DeltaMessage 来还原完整的内容
     role: Optional[str] = None
     content: Optional[str] = None
     reasoning_content: Optional[str] = None
