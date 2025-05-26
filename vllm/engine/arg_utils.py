@@ -238,7 +238,7 @@ class EngineArgs:
     override_neuron_config: Optional[Dict[str, Any]] = None
     override_pooler_config: Optional[PoolerConfig] = None
     compilation_config: Optional[CompilationConfig] = None
-    worker_cls: str = ParallelConfig.worker_cls
+    worker_cls: str = ParallelConfig.worker_cls             # worker 默认初始化为 auto
     worker_extension_cls: str = ParallelConfig.worker_extension_cls
 
     kv_transfer_config: Optional[KVTransferConfig] = None
@@ -1195,7 +1195,7 @@ class EngineArgs:
 
         # Set default arguments for V0 or V1 Engine.
         if use_v1:
-            self._set_default_args_v1(usage_context)
+            self._set_default_args_v1(usage_context)    # 启用 Chunked_Prefill 和 PrefixCaching 策略 ; 定义当前硬件环境能接受的 batch_token_num
         else:
             self._set_default_args_v0(model_config)
 
@@ -1650,20 +1650,20 @@ class EngineArgs:
         """Set Default Arguments for V1 Engine."""
 
         # V1 always uses chunked prefills.
-        self.enable_chunked_prefill = True
+        self.enable_chunked_prefill = True      # V1 默认使用 chunked_prefill 策略
 
         # V1 enables prefix caching by default.
         if self.enable_prefix_caching is None:
             self.enable_prefix_caching = True
 
         # if using prefix caching, we must set a hash algo
-        if self.enable_prefix_caching and self.prefix_caching_hash_algo is None:
+        if self.enable_prefix_caching and self.prefix_caching_hash_algo is None:    # 一般默认使用 vllm 内置的 Hash 算法
             self.prefix_caching_hash_algo = "builtin"
 
         # V1 should use the new scheduler by default.
         # Swap it only if this arg is set to the original V0 default
         if self.scheduler_cls == EngineArgs.scheduler_cls:
-            self.scheduler_cls = "vllm.v1.core.sched.scheduler.Scheduler"
+            self.scheduler_cls = "vllm.v1.core.sched.scheduler.Scheduler"   # 重定向到 V1 的 Scheduler
 
         # When no user override, set the default values based on the usage
         # context.
@@ -1681,6 +1681,7 @@ class EngineArgs:
             # This is only used to set default_max_num_batched_tokens
             device_name = "no-device"
 
+        # 通过控制每轮推理最多接收多少 token 间接控制 KVCache 的大小
         if "h100" in device_name or "h200" in device_name:
             # For H100 and H200, we use larger default values.
             default_max_num_batched_tokens = {
@@ -1694,7 +1695,7 @@ class EngineArgs:
                 UsageContext.LLM_CLASS: 8192,
                 UsageContext.OPENAI_API_SERVER: 2048,
             }
-            default_max_num_seqs = 256
+            default_max_num_seqs = 256  # 8192 / default_max_num_seqs = 32 每个 seq 中的 token 数量
 
         use_context_value = usage_context.value if usage_context else None
         if (self.max_num_batched_tokens is None

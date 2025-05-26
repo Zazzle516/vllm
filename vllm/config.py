@@ -71,11 +71,13 @@ _MULTIMODAL_MODEL_MAX_NUM_BATCHED_TOKENS = 5120
 TaskOption = Literal["auto", "generate", "embedding", "embed", "classify",
                      "score", "reward", "transcription"]
 
+# 文本生成任务  分类任务  之类的
 _ResolvedTask = Literal["generate", "embed", "classify", "score", "reward",
                         "draft", "transcription"]
 
 RunnerType = Literal["generate", "pooling", "draft", "transcription"]
 
+# 什么任务类型(_ResolvedTask) 应该由什么类型的执行器(RunnerType) 来处理
 _RUNNER_TASKS: dict[RunnerType, list[_ResolvedTask]] = {
     "generate": ["generate"],
     "pooling": ["embed", "classify", "score", "reward"],
@@ -511,11 +513,11 @@ class ModelConfig:
             spec_target_max_model_len=spec_target_max_model_len,
             encoder_config=self.encoder_config)     # 获取 hf_config.max_position_embeddings 并验证最大长度的合法性
         self.served_model_name = get_served_model_name(model,
-                                                       served_model_name)   # 可能同时部署多个模型 str | list
+                                                       served_model_name)   # 可能同时部署多个模型  模型以 str | list 声明
         self.multimodal_config = self._init_multimodal_config(
             limit_mm_per_prompt)                    # 判断是否支持多模态输入
         if not self.skip_tokenizer_init:
-            self._verify_tokenizer_mode()           # Q: 目前不知道 tokenizer_mode 对后续的 tokenizer 是怎么影响的
+            self._verify_tokenizer_mode()           # 一般默认是 fast tokenizer
 
         self.is_attention_free = self._init_attention_free()
         self.is_hybrid = self._init_is_hybrid()
@@ -527,13 +529,13 @@ class ModelConfig:
         else:
             self.override_neuron_config = None
 
-        supported_tasks, task = self._resolve_task(task)
+        supported_tasks, task = self._resolve_task(task)    # task: generate
         self.supported_tasks = supported_tasks
         self.task: Final = task
         if self.task in ("draft", "generate"):
-            self.truncation_side = "left"
+            self.truncation_side = "left"       # 让模型后续从尾部继续生成
         else:
-            self.truncation_side = "right"
+            self.truncation_side = "right"      # 作为草稿优先保留前面的信息
 
         self.pooler_config = self._init_pooler_config(override_pooler_config)
         self.logits_processor_pattern = logits_processor_pattern
@@ -545,16 +547,18 @@ class ModelConfig:
         self._verify_cuda_graph()
         self._verify_bnb_config()
 
+    # 模型内部信息都需要通过这个接口访问到全局的唯一一个 ModelRegistry 实例
     @property
     def registry(self):
         return ModelRegistry
 
+    # 获取当前所需模型的全部 architectures
     @property
     def architectures(self) -> list[str]:
         return getattr(self.hf_config, "architectures", [])
 
     def maybe_pull_model_tokenizer_for_s3(self, model: str,
-                                          tokenizer: str) -> None:
+                                     tokenizer: str) -> None:
         """
         Pull the model config or tokenizer to a temporary
         directory in case of S3.
@@ -643,6 +647,7 @@ class ModelConfig:
                 "either 'auto', 'slow', 'mistral' or 'custom'.")
         self.tokenizer_mode = tokenizer_mode
 
+    # vLLM 在模型注册时自动推断其最可能任务类型  因为 Huggingface 的模型并不会显式的告诉你这个模型要干什么...(有病吧
     def _get_preferred_task(
         self,
         architectures: list[str],
@@ -674,14 +679,15 @@ class ModelConfig:
 
         return None
 
+    # 返回该模型适合执行的任务类型
     def _resolve_task(
         self,
-        task_option: Union[TaskOption, Literal["draft"]],
+        task_option: Union[TaskOption, Literal["draft"]],   # 默认是 draft 任务
     ) -> tuple[set[_ResolvedTask], _ResolvedTask]:
         if task_option == "draft":
             return {"draft"}, "draft"
 
-        registry = self.registry
+        registry = self.registry            # 全局的 ModelRegistry
         architectures = self.architectures
 
         runner_support: dict[RunnerType, bool] = {
@@ -708,7 +714,7 @@ class ModelConfig:
 
             if len(supported_tasks_lst) > 1:
                 preferred_task = self._get_preferred_task(
-                    architectures, supported_tasks)
+                    architectures, supported_tasks)         # generate
                 if preferred_task is not None:
                     selected_task = preferred_task
 
@@ -747,6 +753,7 @@ class ModelConfig:
             quant_cfg = getattr(self.hf_config, "compression_config", None)
         return quant_cfg
 
+    # 如果该模型存在量化  那么在 vllm 中查找对应的量化方法并覆盖
     def _verify_quantization(self) -> None:
         supported_quantization = QUANTIZATION_METHODS
         optimized_quantization_methods = [
@@ -796,11 +803,12 @@ class ModelConfig:
                     "optimized yet. The speed can be slower than "
                     "non-quantized models.", self.quantization)
 
+    # max_seq_len_to_capture 用在推理时  cuda 会先采用这个长度执行一次 warmup 推理  后续小于等于这个长度的 request 可以享受 cuda graph 优化
     def _verify_cuda_graph(self) -> None:
         if self.max_seq_len_to_capture is None:
             self.max_seq_len_to_capture = self.max_model_len
         self.max_seq_len_to_capture = min(self.max_seq_len_to_capture,
-                                          self.max_model_len)
+                                          self.max_model_len)       # 8192
         ROCM_UNSUPPORTED_MODELS = ['mllama']
         if (self.hf_config.model_type in ROCM_UNSUPPORTED_MODELS
                 and not self.enforce_eager and current_platform.is_rocm()):
@@ -1256,10 +1264,10 @@ class CacheConfig:
             vLLM execution.
         swap_space: Size of the CPU swap space per GPU (in GiB).
         cache_dtype: Data type for kv cache storage.
-        is_attention_free: Whether the model is attention-free.
+        is_attention_free: Whether the model is attention-free.                     # 判断模型是否包含自注意力机制
         num_gpu_blocks_override: Number of GPU blocks to use. This overrides the
-            profiled num_gpu_blocks if specified. Does nothing if None.
-        sliding_window: Sliding window size for the KV cache.
+            profiled num_gpu_blocks if specified. Does nothing if None.             # Q: ???
+        sliding_window: Sliding window size for the KV cache.                       # 固定 Attention 计算中的窗口大小 传统的全连接 attention 太花资源
         enable_prefix_caching: Whether to enable prefix caching.
         cpu_offload_gb: Size of the CPU offload buffer in GiB.
     """
@@ -1308,7 +1316,7 @@ class CacheConfig:
         self.prefix_caching_hash_algo = prefix_caching_hash_algo
         self.cpu_offload_gb = cpu_offload_gb
         self.calculate_kv_scales = calculate_kv_scales
-        self._verify_args()
+        self._verify_args()                 # 判断 CPU 和 GPU 使用合法性
         self._verify_cache_dtype()
         self._verify_prefix_caching()
 
@@ -1558,25 +1566,29 @@ DistributedExecutorBackend = Literal["ray", "mp", "uni", "external_launcher"]
 class ParallelConfig:
     """Configuration for the distributed execution."""
 
-    pipeline_parallel_size: int = 1
+    pipeline_parallel_size: int = 1                     # 类似于 CPU 的流水线指令执行  模型本身是串行的
+                                                        # 但是该模型的某一个在 vllm 的调度下可以一直执行某个 batch 大小的计算
     """Number of pipeline parallel groups."""
-    tensor_parallel_size: int = 1
+    tensor_parallel_size: int = 1                       # 计算并行  把 Attention 中大矩阵相乘拆分为多个小矩阵相乘后拼接
     """Number of tensor parallel groups."""
-    data_parallel_size: int = 1
+    data_parallel_size: int = 1                         # 基础并行  完全没有任何数据交互
     """Number of data parallel groups. MoE layers will be sharded according to
     the product of the tensor parallel size and data parallel size."""
-    data_parallel_rank: int = 0
+    data_parallel_rank: int = 0                         # 不考虑 DP Group 的每块 GPU 的全局编号
     """Rank of the data parallel group."""
-    data_parallel_rank_local: Optional[int] = None
+    data_parallel_rank_local: Optional[int] = None      # 在 DP Group 内部的每块 GPU 编号
     """Local rank of the data parallel group, defaults to global rank."""
     data_parallel_master_ip: str = "127.0.0.1"
     """IP of the data parallel master."""
-    data_parallel_master_port: int = 29500
+    data_parallel_master_port: int = 29500              # 在 DP Group 内部进程通信
     """Port of the data parallel master."""
-    enable_expert_parallel: bool = False
+    enable_expert_parallel: bool = False                # 单独针对 DeepSeek 的优化
     """Use expert parallelism instead of tensor parallelism for MoE layers."""
 
-    max_parallel_loading_workers: Optional[int] = None
+    max_parallel_loading_workers: Optional[int] = None  # 控制了模型初始化时最多有多少个并发去加载模型的线程（worker）
+                                                        # 因为使用 TP 后需要同时读取大量的参数  那么在这个过程中可能内存爆炸
+                                                        # Tip: 这个参数并不会和 tensor_parallel_size 直接冲突  因为 TPSize 决定的是执行方式
+                                                        # 虽然这个参数会影响最终的执行效果
     """Maximum number of parallal loading workers when loading model
     sequentially in multiple batches. To avoid RAM OOM when using tensor
     parallel and large models."""
@@ -1595,7 +1607,7 @@ class ParallelConfig:
     """ray distributed model workers placement group."""
 
     distributed_executor_backend: Optional[Union[DistributedExecutorBackend,
-                                                 type["ExecutorBase"]]] = None
+                                                 type["ExecutorBase"]]] = None      # 在无并行的环境下设为 'uni'
     """Backend to use for distributed model
     workers, either "ray" or "mp" (multiprocessing). If the product
     of pipeline_parallel_size and tensor_parallel_size is less than
@@ -1604,7 +1616,8 @@ class ParallelConfig:
     to "ray" if Ray is installed and fail otherwise. Note that tpu
     and hpu only support Ray for distributed inference."""
 
-    worker_cls: str = "auto"
+# Q: 这里三个和 worker 相关的初始化  worker_cls sd_worker_cls worker_extension_cls 都代表了什么
+    worker_cls: str = "auto"                                                        # Q: zazzle ???这里的 auto 是什么呢
     """The full name of the worker class to use. If "auto", the worker class
     will be determined based on the platform."""
     sd_worker_cls: str = "auto"
@@ -1616,9 +1629,12 @@ class ParallelConfig:
     new attributes and methods to the worker class for use in collective_rpc
     calls."""
 
-    world_size: int = field(init=False)
+# worker = process 每个 worker 在 vLLM 环境对应唯一一个 (tp_rank, pp_rank, dp_rank) 元组
+# 每个 worker 会参与到至少 2 个通信组中 tp_group_reduce/tp_group_all_gather  pp_group_send/pp_group_recv
+
+    world_size: int = field(init=False)                 # 每个 DP 中用于执行模型本体的进程数 (通常 1 worker = 1 GPU)
     """world_size is TPxPP, it affects the number of workers we create."""
-    world_size_across_dp: int = field(init=False)
+    world_size_across_dp: int = field(init=False)       # vLLM 的全局进程数
     """world_size_across_dp is TPxPPxDP, it is the size of the world
     including data parallelism."""
 
@@ -1681,21 +1697,21 @@ class ParallelConfig:
 
     def __post_init__(self) -> None:
         self.world_size = self.pipeline_parallel_size * \
-            self.tensor_parallel_size
+            self.tensor_parallel_size                                           # 一个模型副本能拥有的最大进程数
 
         if self.data_parallel_size > 1:
             # Data parallel was specified in the engine args.
             self.data_parallel_master_port = get_open_port()
             # TODO multi-node
         else:
-            # Otherwise fall back to env vars (e.g. for offline SPMD case).
+            # Otherwise fall back to env vars (e.g. for offline SPMD case).     # Single Program Multi Data  每个 Kubernete pot 部署一个 vllm 实例
             self.data_parallel_size = envs.VLLM_DP_SIZE
             self.data_parallel_rank = envs.VLLM_DP_RANK
             self.data_parallel_rank_local = envs.VLLM_DP_RANK_LOCAL
             self.data_parallel_master_ip = envs.VLLM_DP_MASTER_IP
             self.data_parallel_master_port = envs.VLLM_DP_MASTER_PORT
 
-        self.world_size_across_dp = self.world_size * self.data_parallel_size
+        self.world_size_across_dp = self.world_size * self.data_parallel_size   # 全局最大进程数
 
         if self.distributed_executor_backend == "external_launcher":
             import os
@@ -1797,7 +1813,7 @@ class SchedulerConfig:
     runner_type: RunnerType = "generate"
     """The runner type to launch for the model."""
 
-    max_num_batched_tokens: int = None  # type: ignore
+    max_num_batched_tokens: int = None  # type: ignore                              # 在 UsageContext.LLM_CLASS 中确定
     """Maximum number of tokens to be processed in a single iteration.
     
     This config has no static default. If left unspecified by the user, it will
@@ -1809,22 +1825,24 @@ class SchedulerConfig:
     This config has no static default. If left unspecified by the user, it will
     be set in `EngineArgs.create_engine_config` based on the usage context."""
 
-    max_model_len: int = None  # type: ignore
+    max_model_len: int = None  # type: ignore                                       # 在 ModelConfig._set_default_args_v1 中获取
     """Maximum length of a sequence (including prompt and generated text). This
     is primarily set in `ModelConfig` and that value should be manually
     duplicated here."""
 
-    max_num_partial_prefills: int = 1
+    max_num_partial_prefills: int = 1                                               # 同时最多允许几个 request 处于 prefill 中
+                                                                                    # 在 ChunkedPrefill 策略中  request 会被切分为多个 Chunk  那么每个 Chunk 去执行 Prefill
+                                                                                    # 在这个过程中  prefill 是以 Chunk 为单位完成的  那么自然是 Partial 的状态
     """For chunked prefill, the maximum number of sequences that can be
     partially prefilled concurrently."""
 
-    max_long_partial_prefills: int = 1
+    max_long_partial_prefills: int = 1                                              # 同时最多只能 prefill 一个长 prompt 其余排队等着  (短作业优先)
     """For chunked prefill, the maximum number of prompts longer than
     long_prefill_token_threshold that will be prefilled concurrently. Setting
     this less than max_num_partial_prefills will allow shorter prompts to jump
     the queue in front of longer prompts in some cases, improving latency."""
 
-    long_prefill_token_threshold: int = 0
+    long_prefill_token_threshold: int = 0                                           # 默认是 max_model_len*0.04
     """For chunked prefill, a request is considered long if the prompt is
     longer than this number of tokens."""
 
@@ -1837,7 +1855,9 @@ class SchedulerConfig:
     NOTE: This will be replaced by speculative config in the future; it is
     present to enable correctness tests until then."""
 
-    delay_factor: float = 0.0
+    delay_factor: float = 0.0                                                       # 因为现在 vllm 是 ChunkedPrefill 策略  默认 prefill 和 Decode 是混合执行的
+                                                                                    # 而在高频率的 prefill 请求下  Decode 可能没机会执行  那么引入这个延迟参数
+                                                                                    # 手动延迟每个 prefill request 之间的时间  让 decode 有机会执行
     """Apply a delay (of delay factor multiplied by previous
     prompt latency) before scheduling next prompt."""
 
@@ -1862,7 +1882,8 @@ class SchedulerConfig:
     NOTE: This is not currently configurable. It will be overridden by
     max_num_batched_tokens in case max multimodal embedding size is larger."""
 
-    preemption_mode: Optional[str] = None
+    preemption_mode: Optional[str] = None                                           # preemption: 抢占/中断
+                                                                                    # 当资源不足时 判断当前 KVCache 是 swap 转移出去还是直接清理后 recomputation(default)
     """Whether to perform preemption by swapping or
     recomputation. If not specified, we determine the mode as follows:
     We use recomputation by default since it incurs lower overhead than
@@ -1870,7 +1891,7 @@ class SchedulerConfig:
     (e.g., beam search), recomputation is not currently supported. In
     such a case, we use swapping instead."""
 
-    num_scheduler_steps: int = 1
+    num_scheduler_steps: int = 1                                                    # 一次 Scheduler 完成一次 Inference
     """Maximum number of forward steps per scheduler call."""
 
     multi_step_stream_outputs: bool = True
@@ -1900,7 +1921,7 @@ class SchedulerConfig:
     some image tokens can be scheduled (like TTTTIIIII, leaving IIIII),
     it will be scheduled as TTTT in one step and IIIIIIIIII in the next."""
 
-    scheduler_cls: Union[str, type[object]] = "vllm.core.scheduler.Scheduler"
+    scheduler_cls: Union[str, type[object]] = "vllm.core.scheduler.Scheduler"       # 支持用户自定义 Scheduler
     """The scheduler class to use. "vllm.core.scheduler.Scheduler" is the
     default scheduler. Can be a class directly or the path to a class of form
     "mod.custom_class"."""
@@ -2840,7 +2861,7 @@ _STR_DTYPE_TO_TORCH_DTYPE = {
     "bfloat16": torch.bfloat16,
 }
 
-_ROCM_NOT_SUPPORTED_DTYPE: list[str] = []  #
+_ROCM_NOT_SUPPORTED_DTYPE: list[str] = []
 
 
 def _get_and_verify_dtype(
@@ -3147,7 +3168,7 @@ class ObservabilityConfig:
     """Configuration for observability - metrics and tracing."""
     show_hidden_metrics: bool = False
 
-    otlp_traces_endpoint: Optional[str] = None
+    otlp_traces_endpoint: Optional[str] = None  # OTLP: OpenTelemetry Tracing Endpoint 传输协议
 
     # Collecting detailed timing information for each request can be expensive.
 
@@ -3280,10 +3301,10 @@ class KVTransferConfig(BaseModel):
 
 class CompilationLevel:
     # constants for the levels of the compilation process
-    NO_COMPILATION = 0
-    DYNAMO_AS_IS = 1
-    DYNAMO_ONCE = 2
-    PIECEWISE = 3
+    NO_COMPILATION = 0                                      # 不进行任何编译  完全的 eager 执行
+    DYNAMO_AS_IS = 1                                        # 使用 torch.compile 编译一次
+    DYNAMO_ONCE = 2                                         # 编译一次  复用 trace
+    PIECEWISE = 3                                           # 分段单独编译
 
 
 class CompilationConfig(BaseModel):
@@ -3330,7 +3351,7 @@ class CompilationConfig(BaseModel):
         - cudagraph_capture_sizes: sizes to capture cudagraph.
             - None (default): capture sizes are inferred from vllm config.
             - list[int]: capture sizes are specified as given.
-        - cudagraph_num_of_warmups: number of warmup runs for cudagraph.
+        - cudagraph_num_of_warmups: number of warmup runs for cudagraph.            # 设定 token_num 上限让 cuda_graph 进行优化
             It means the first several runs will be treated as warmup runs.
             Only after that, the execution will be recorded, and the recorded
             cudagraph will be used for subsequent runs.
@@ -3379,7 +3400,7 @@ class CompilationConfig(BaseModel):
     inductor_compile_config: dict = Field(default_factory=dict)
     inductor_passes: dict[str, str] = Field(default_factory=dict)
 
-    use_cudagraph: bool = False
+    use_cudagraph: bool = False                             # 目前 vllm 默认使用 inductor
     cudagraph_num_of_warmups: int = 0
     cudagraph_capture_sizes: Optional[list[int]] = None
     cudagraph_copy_inputs: bool = False
@@ -3603,7 +3624,7 @@ class CompilationConfig(BaseModel):
 
     def set_splitting_ops_for_v1(self):
         # If default, override splitting ops for piecewise cudagraph on V1.
-        # NOTE: this function needs to be called
+        # NOTE: this function needs to be called                    # 因为 vllm 默认使用 PIECEWISE 策略  那么需要对模型进行分段  那么分段默认以 attention 为界
         if not self.splitting_ops:
             self.splitting_ops = [
                 "vllm.unified_attention",
@@ -3784,7 +3805,7 @@ class VllmConfig:
 
     def __post_init__(self):
         """Verify configs are valid & consistent with each other.
-        """
+        """ # 根据每个模块的 config 情况进行交叉验证
         if self.model_config is not None:
             self.model_config.verify_async_output_proc(self.parallel_config,
                                                        self.speculative_config,
@@ -3814,13 +3835,13 @@ class VllmConfig:
             self.model_config is not None and \
             self.scheduler_config.chunked_prefill_enabled and \
             self.model_config.dtype == torch.float32 and \
-            current_platform.get_device_capability() == (7, 5):
+            current_platform.get_device_capability() == (7, 5):     # (7, 5): NVIDIA Turing 架构的 Compute Capability
             logger.warning_once(
                 "Turing devices tensor cores do not support float32 matmul. "
                 "To workaround this limitation, vLLM will set 'ieee' input "
                 "precision for chunked prefill triton kernels.")
 
-        if self.compilation_config is None:
+        if self.compilation_config is None:                         # 为什么 compileconfig 到这里才创建实例呢
             self.compilation_config = CompilationConfig()
         if envs.VLLM_USE_V1 and self.model_config is not None and \
             not self.model_config.enforce_eager:
@@ -3836,7 +3857,7 @@ class VllmConfig:
             self.compilation_config.pass_config.enable_fusion = False
             self.compilation_config.pass_config.enable_noop = False
             self.compilation_config.level = CompilationLevel.PIECEWISE
-            self.compilation_config.set_splitting_ops_for_v1()
+            self.compilation_config.set_splitting_ops_for_v1()      # 定义模型分段的位置
 
         self._set_cudagraph_sizes()
 
@@ -3878,6 +3899,9 @@ class VllmConfig:
             self.instance_id = random_uuid()[:5]
 
     def _set_cudagraph_sizes(self):
+        # Anyway, 这里的注释有点不清晰，首先在当前的硬件平台上，vllm 设定能接受的 max_num_tokens = 8192  max_num_seqs = 256
+        # 那么平均到每个 seq 的 token 大概是 32 个  但是实际运行的时候每个 seq 的 token 数量是浮动的
+        # 那么 vllm 目前的一个 seq 的 batch_size 支持范围是 [1, 512] 那么超过这个范围的 [513, 8192] 就没有任何优化了
         """
         cudagraph batchsize padding logic:
 
@@ -3937,7 +3961,7 @@ class VllmConfig:
                 not self.model_config.enforce_eager:
                 batch_size_capture_list = [1, 2, 4
                                            ] + [i for i in range(8, 513, 8)]
-                max_num_tokens = self.scheduler_config.max_num_batched_tokens
+                max_num_tokens = self.scheduler_config.max_num_batched_tokens   # 8192
                 batch_size_capture_list = [
                     size for size in batch_size_capture_list
                     if size <= max_num_tokens

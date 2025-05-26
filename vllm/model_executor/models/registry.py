@@ -238,7 +238,7 @@ _SUBPROCESS_COMMAND = [
     sys.executable, "-m", "vllm.model_executor.models.registry"
 ]
 
-
+# 记录模型的一些特性  是否支持多模态  是否支持 ProcessParallel 之类的  判断适配 vllm 的哪些优化
 @dataclass(frozen=True)
 class _ModelInfo:
     architecture: str
@@ -283,6 +283,8 @@ class _BaseRegisteredModel(ABC):
         raise NotImplementedError
 
 
+# 模型在 vllm 中的两种状态  _RegisteredModel: 已导入  _LazyRegisteredModel: 未导入
+# 模型一旦被 import 进来就会进行 CUDA 相关的初始化  如果需要延迟加载  就是用子进程进行隔离 _LazyRegisteredModel
 @dataclass(frozen=True)
 class _RegisteredModel(_BaseRegisteredModel):
     """
@@ -317,7 +319,7 @@ class _LazyRegisteredModel(_BaseRegisteredModel):
     # Performed in another process to avoid initializing CUDA
     def inspect_model_cls(self) -> _ModelInfo:
         return _run_in_subprocess(
-            lambda: _ModelInfo.from_model_cls(self.load_model_cls()))
+            lambda: _ModelInfo.from_model_cls(self.load_model_cls()))   # OS 级别的子进程  不会受 python 的 GIL 影响
 
     def load_model_cls(self) -> Type[nn.Module]:
         mod = importlib.import_module(self.module_name)
@@ -330,7 +332,7 @@ def _try_load_model_cls(
     model: _BaseRegisteredModel,
 ) -> Optional[Type[nn.Module]]:
     from vllm.platforms import current_platform
-    current_platform.verify_model_arch(model_arch)
+    current_platform.verify_model_arch(model_arch)      # 检查适配
     try:
         return model.load_model_cls()
     except Exception:
@@ -339,6 +341,7 @@ def _try_load_model_cls(
         return None
 
 
+# 需要继承 _BaseRegisteredModel 的模型实例实现 inspect_model_cls
 @lru_cache(maxsize=128)
 def _try_inspect_model_cls(
     model_arch: str,
@@ -420,7 +423,9 @@ class _ModelRegistry:
         if model_arch not in self.models:
             return None
 
-        return _try_load_model_cls(model_arch, self.models[model_arch])
+        # 这里的 self.models 作为 Dict 通过 [model_arch] 取得对应的 _BaseRegisteredModel 子类实例
+        # 再调用子类具体实现的 load_model_cls()
+        return _try_load_model_cls(model_arch, self.models[model_arch])     # 调用到全局定义的 @lru_cache(_try_load_model_cls(model_arch, model))
 
     def _try_inspect_model_cls(self, model_arch: str) -> Optional[_ModelInfo]:
         if model_arch not in self.models:
@@ -428,6 +433,7 @@ class _ModelRegistry:
 
         return _try_inspect_model_cls(model_arch, self.models[model_arch])
 
+    # 根据用户传入的 architectures，过滤出在当前注册表 self.models 中存在的模型结构名
     def _normalize_archs(
         self,
         architectures: Union[str, List[str]],
@@ -438,14 +444,25 @@ class _ModelRegistry:
             logger.warning("No model architectures are specified")
 
         # filter out support architectures
+        # normalized_arch 是根据用户传入的 architectures 在 self.models 进行筛选后确实存在的模型
         normalized_arch = list(
             filter(lambda model: model in self.models, architectures))
 
+        # 可以看这个简单版的
+        # normalized_arch = []
+        # for model in architectures:
+        #     if model in self.models:
+        #         normalized_arch.append(model)
+
         # make sure Transformers backend is put at the last as a fallback
+        # 如果 vllm 目前没有支持  至少也先把 Transformer 加上
         if len(normalized_arch) != len(architectures):
             normalized_arch.append("TransformersForCausalLM")
         return normalized_arch
 
+# 按照顺序  inspect_model_cls -> resolve_model_cls
+
+    # 根据目前支持的 arch 获得对应模型的信息
     def inspect_model_cls(
         self,
         architectures: Union[str, List[str]],
@@ -459,6 +476,7 @@ class _ModelRegistry:
 
         return self._raise_for_unsupported(architectures)
 
+    # 根据目前支持的 arch 获得对应模型本身
     def resolve_model_cls(
         self,
         architectures: Union[str, List[str]],
@@ -471,6 +489,8 @@ class _ModelRegistry:
                 return (model_cls, arch)
 
         return self._raise_for_unsupported(architectures)
+
+# 后续通过 inspect_model_cls 访问其中的各种参数
 
     def is_text_generation_model(
         self,
@@ -549,14 +569,17 @@ class _ModelRegistry:
         model_cls, _ = self.inspect_model_cls(architectures)
         return not model_cls.supports_v0_only
 
-
+# Important! 在导入阶段就执行的  生成全局的唯一一个 _ModelRegistry 实例
+# 这个全局实例访问 _VLLM_MODELS 完成 vllm 目前支持的初始化
 ModelRegistry = _ModelRegistry({
     model_arch:
     _LazyRegisteredModel(
         module_name=f"vllm.model_executor.models.{mod_relname}",
         class_name=cls_name,
     )
+    # # key: model_arch value: (mod_relname, cls_name)    双层字典的嵌套结构
     for model_arch, (mod_relname, cls_name) in _VLLM_MODELS.items()
+    # 遍历 _VLLM_MODELS 对其中的每一个元素创建 _LazyRegisteredModel 实例
 })
 
 _T = TypeVar("_T")
