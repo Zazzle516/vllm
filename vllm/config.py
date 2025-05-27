@@ -1293,7 +1293,7 @@ class CacheConfig:
 
     def __init__(
         self,
-        block_size: int,
+        block_size: int,                                            # 在后续返回 LLM instance 前会在硬件平台初始化 cuda.py  check_and_update_config() => 16
         gpu_memory_utilization: float,
         swap_space: float,
         cache_dtype: str,
@@ -3859,7 +3859,7 @@ class VllmConfig:
             self.compilation_config.level = CompilationLevel.PIECEWISE
             self.compilation_config.set_splitting_ops_for_v1()      # 定义模型分段的位置
 
-        self._set_cudagraph_sizes()
+        self._set_cudagraph_sizes()                                 # 设定 cudagraph batch_size 范围
 
         if self.cache_config is not None and \
             self.cache_config.cpu_offload_gb > 0 and \
@@ -3893,8 +3893,8 @@ class VllmConfig:
             if self.cache_config is not None:
                 self.cache_config.enable_prefix_caching = False
 
-        current_platform.check_and_update_config(self)
-
+        current_platform.check_and_update_config(self)              # 重定向 parallel_config.worker_cls 到 vllm.v1.worker.gpu_worker.Worker
+                                                                    # 定义 cache_config.block_size = 16
         if not self.instance_id:
             self.instance_id = random_uuid()[:5]
 

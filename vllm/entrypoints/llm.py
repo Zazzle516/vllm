@@ -259,7 +259,8 @@ class LLM:
         # Create the Engine (autoselects V0 vs V1)
         self.llm_engine = LLMEngine.from_engine_args(
             engine_args=engine_args, usage_context=UsageContext.LLM_CLASS)  # 表示当前通过 LLM_CALSS 直接调用 vLLM
-        self.engine_class = type(self.llm_engine)
+        print("zazzle test if basic cound run to here!")
+        self.engine_class = type(self.llm_engine)   # 完全执行不到这里
 
         self.request_counter = Counter()
         self.default_sampling_params: Union[dict[str, Any], None] = None

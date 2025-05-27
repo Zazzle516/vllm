@@ -38,26 +38,31 @@ class Executor(ExecutorBase):
                     "distributed_executor_backend must be a subclass of "
                     f"ExecutorBase. Got {distributed_executor_backend}.")
             executor_class = distributed_executor_backend
+
         elif distributed_executor_backend == "ray":
             print("zazzle vllm/v1/executor get_class ray line_42")
             from vllm.v1.executor.ray_distributed_executor import (  # noqa
                 RayDistributedExecutor)
             executor_class = RayDistributedExecutor
+
         elif distributed_executor_backend == "mp":
             print("zazzle vllm/v1/executor get_class mp line_47")
             from vllm.v1.executor.multiproc_executor import MultiprocExecutor
             executor_class = MultiprocExecutor
+
         elif distributed_executor_backend == "uni":
-            # 执行这里!
             print("zazzle vllm/v1/executor get_class uni line_52")
             executor_class = UniProcExecutor
+
         elif distributed_executor_backend == "external_launcher":
             # TODO: make v1 scheduling deterministic
             # to support external launcher
             executor_class = ExecutorWithExternalLauncher
+
         else:
             raise ValueError("Unknown distributed executor backend: "
                              f"{distributed_executor_backend}")
+
         return executor_class
 
     def initialize_from_config(self,

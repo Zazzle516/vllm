@@ -113,8 +113,9 @@ class LLMEngine:
                 "Passing StatLoggers to V1 is not yet supported. "
                 "Set VLLM_USE_V1=0 and file and issue on Github.")
 
+        # 进入 LLMEngine.__init__ 实例化
         return cls(vllm_config=vllm_config,
-                   executor_class=Executor.get_class(vllm_config),
+                   executor_class=Executor.get_class(vllm_config),      # 获取当前 Executor 执行环境 "uni"
                    log_stats=(not disable_log_stats),
                    usage_context=usage_context,
                    stat_loggers=stat_loggers,
