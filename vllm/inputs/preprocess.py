@@ -40,7 +40,7 @@ class InputPreprocessor:
         if self.tokenizer is None:
             raise ValueError("You cannot pass text prompts when "
                              "`skip_tokenizer_init` is True")
-
+        print("zazzle vllm/inputs/preprocess.py line_43 self.tokenizer", type(self.tokenizer))
         return self.tokenizer
 
     def get_bos_token_id(self,
@@ -201,6 +201,7 @@ class InputPreprocessor:
                     "do_lower_case", False)):
             prompt = prompt.lower()
 
+        print("zazzle vllm/inputs/preprocess.py _tokenize_prompt line_204")
         return tokenizer.encode(prompt=prompt,
                                 lora_request=lora_request,
                                 add_special_tokens=add_special_tokens)

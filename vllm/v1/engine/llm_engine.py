@@ -49,6 +49,8 @@ class LLMEngine:
         use_cached_outputs: bool = False,
         multiprocess_mode: bool = False,
     ) -> None:
+        print("zazzle vllm/v1/engine/llm_engine.py LLMEngine init line_52 multiprocess_mode", multiprocess_mode)
+        # multiprocess_mode = False
         if not envs.VLLM_USE_V1:
             raise ValueError(
                 "Using V1 LLMEngine, but envs.VLLM_USE_V1=False. "
@@ -67,18 +69,19 @@ class LLMEngine:
             self.dp_group = parallel_config.stateless_init_dp_group()
         else:
             self.dp_group = None
-        self.should_execute_dummy_batch = False
+        self.should_execute_dummy_batch = False                     # 利用 DummyData 分析目前的执行环境进行优化
 
         # Tokenizer (+ ensure liveness if running in another process).
-        self.tokenizer = init_tokenizer_from_configs(
-            model_config=vllm_config.model_config,
+        self.tokenizer = init_tokenizer_from_configs(               # Q: 总而言之 完全不明白这里的 tokenizer 的功能
+            model_config=vllm_config.model_config,                  # 能知道的是和并行环境  和 LoRA 相关  但是都不了解  所以这里为了并行做的一些内容也就不明白...
             scheduler_config=vllm_config.scheduler_config,
             parallel_config=vllm_config.parallel_config,
             lora_config=vllm_config.lora_config)
-        self.tokenizer.ping()
+        self.tokenizer.ping()                                       # 把一些 config 整理成 dict Q1: 为什么选这些 config
+                                                                    # Q: 而且为什么要 ping 呢  原本的默认返回是 True  那么会在什么地方修改呢
 
         # Processor (convert Inputs --> EngineCoreRequests)
-        self.processor = Processor(vllm_config=vllm_config,
+        self.processor = Processor(vllm_config=vllm_config,         # 初始化 Multimodal 的缓存映射表
                                    tokenizer=self.tokenizer,
                                    mm_registry=mm_registry)
 
@@ -87,7 +90,7 @@ class LLMEngine:
                                                 log_stats=False)
 
         # EngineCore (gets EngineCoreRequests and gives EngineCoreOutputs)
-        self.engine_core = EngineCoreClient.make_client(
+        self.engine_core = EngineCoreClient.make_client(            # 核心: 在这里面出现了 Engine core initialization failed 问题
             multiprocess_mode=multiprocess_mode,
             asyncio_mode=False,
             vllm_config=vllm_config,
@@ -115,7 +118,7 @@ class LLMEngine:
 
         # 进入 LLMEngine.__init__ 实例化
         return cls(vllm_config=vllm_config,
-                   executor_class=Executor.get_class(vllm_config),      # 获取当前 Executor 执行环境 "uni"
+                   executor_class=Executor.get_class(vllm_config),      # 获取当前 Executor 执行环境 UniProcExecutor
                    log_stats=(not disable_log_stats),
                    usage_context=usage_context,
                    stat_loggers=stat_loggers,
@@ -165,6 +168,7 @@ class LLMEngine:
 
     @classmethod
     def validate_outputs(cls, outputs, output_type):
+        print("zazzle vllm/v1/engine/llm_engine.py validate_outputs line_169")
         return outputs
 
     def abort_request(self, request_ids: list[str]) -> None:
@@ -184,6 +188,7 @@ class LLMEngine:
         prompt_adapter_request: Optional[PromptAdapterRequest] = None,
         priority: int = 0,
     ) -> None:
+        print("zazzle vllm/v1/engine/llm_engine.py add_request line_191")
         # Process raw inputs into the request.
         request = self.processor.process_inputs(request_id, prompt, params,
                                                 arrival_time, lora_request,
@@ -214,7 +219,7 @@ class LLMEngine:
             self.engine_core.add_request(child_request)
 
     def step(self) -> list[RequestOutput]:
-
+        print("zazzle vllm/v1/engine/llm_engine.py step line_218")
         if self.should_execute_dummy_batch:
             self.should_execute_dummy_batch = False
             self.engine_core.execute_dummy_batch()

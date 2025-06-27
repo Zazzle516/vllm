@@ -104,7 +104,7 @@ class BackgroundProcHandle:
         target_fn: Callable,
         process_kwargs: dict[Any, Any],
     ):
-        context = get_mp_context()
+        context = get_mp_context()                      # 构造并启动一个后他子进程
 
         assert ("input_path" not in process_kwargs
                 and "output_path" not in process_kwargs)
@@ -115,7 +115,7 @@ class BackgroundProcHandle:
         self.proc: Process = context.Process(target=target_fn,
                                              kwargs=process_kwargs,
                                              name=process_name)
-        self._finalizer = weakref.finalize(self, shutdown, self.proc,
+        self._finalizer = weakref.finalize(self, shutdown, self.proc,       # 当这个对象被销毁时，自动调用 shutdown() 关闭子进程
                                            input_path, output_path)
         self.proc.start()
 

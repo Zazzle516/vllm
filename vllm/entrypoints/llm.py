@@ -259,11 +259,11 @@ class LLM:
         # Create the Engine (autoselects V0 vs V1)
         self.llm_engine = LLMEngine.from_engine_args(
             engine_args=engine_args, usage_context=UsageContext.LLM_CLASS)  # 表示当前通过 LLM_CALSS 直接调用 vLLM
-        print("zazzle test if basic cound run to here!")
-        self.engine_class = type(self.llm_engine)   # 完全执行不到这里
+        self.engine_class = type(self.llm_engine)
 
-        self.request_counter = Counter()
+        self.request_counter = Counter()                                    # 标记当前接收的 request 后续按顺序处理
         self.default_sampling_params: Union[dict[str, Any], None] = None
+        print("zazzle test LLM initialization finished")
 
     def get_tokenizer(self) -> AnyTokenizer:
         return self.llm_engine.get_tokenizer_group(TokenizerGroup).tokenizer
@@ -1435,6 +1435,7 @@ class LLM:
         total_in_toks = 0
         total_out_toks = 0
         while self.llm_engine.has_unfinished_requests():
+            print("zazzle vllm/entrypoints/llm.py _run_engine line_1438")
             step_outputs = self.llm_engine.step()
             for output in step_outputs:
                 if output.finished:

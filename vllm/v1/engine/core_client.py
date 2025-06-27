@@ -67,7 +67,7 @@ class EngineCoreClient(ABC):
 
             return AsyncMPClient(vllm_config, executor_class, log_stats)
 
-        if multiprocess_mode and not asyncio_mode:
+        if multiprocess_mode and not asyncio_mode:                  # 默认使用 multiprocess_mode
             return SyncMPClient(vllm_config, executor_class, log_stats)
 
         return InprocClient(vllm_config, executor_class, log_stats)
@@ -352,6 +352,10 @@ class MPClient(EngineCoreClient):
         * AsyncMPClient subclass for AsyncLLM usage
         * SyncMPClient subclass for LLM usage
     """
+    # ZMQ: Zero Message Queue 异步通信库
+    # IPC: Intern Process Communication 不同进程间交换数据信号
+
+    # ZMQ + IPC: 进程之间通过本地的 socket 文件通信
 
     def __init__(
         self,

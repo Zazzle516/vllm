@@ -203,6 +203,7 @@ class LLMEngine:
         else:
             outputs_ = outputs
 
+        print("zazzle vllm/engine/llm_engine.py validate_outputs line_206")
         return outputs_
 
     tokenizer: Optional[BaseTokenizerGroup]
@@ -519,7 +520,8 @@ class LLMEngine:
             from vllm.v1.engine.llm_engine import LLMEngine as V1LLMEngine
             engine_cls = V1LLMEngine
 
-        # Tip: 在 engine_cls 被 V1LLMEngine 覆盖后要利用之前的 config 参数重新生成实例
+        # Tip: 在 engine_cls 被 V1LLMEngine 覆盖后要利用之前的 config 参数重新生成 V1LLMEngine 实例
+        # 完成 tokenizer_group EngineCoreClient 之类的 Multiprocessor 相关的实例化
         return engine_cls.from_vllm_config(
             vllm_config=vllm_config,
             usage_context=usage_context,
@@ -1295,6 +1297,7 @@ class LLMEngine:
                     seq.append_token_id(sample.output_token, sample.logprobs)
 
     def step(self) -> List[Union[RequestOutput, PoolingRequestOutput]]:
+        print("zazzle vllm/engine/llm_engine.py step line_1299")
         """Performs one decoding iteration and returns newly generated results.
 
         .. figure:: https://i.imgur.com/sv2HssD.png
@@ -1408,7 +1411,7 @@ class LLMEngine:
         assert scheduler_outputs is not None
 
         if not scheduler_outputs.is_empty():
-
+            print("zazzle vllm/engine/llm_engine.py step not scheduler_outputs.is_empty() line_1412")
             # Check if we have a cached last_output from the previous iteration.
             # For supporting PP this is probably the best way to pass the
             # sampled_token_ids, as a separate broadcast over all the PP stages
@@ -1457,11 +1460,13 @@ class LLMEngine:
         else:
             # Nothing scheduled => If there is pending async postprocessor,
             # then finish it here.
+            print("zazzle vllm/engine/llm_engine.py step scheduler_outputs.is_empty() line_1461")
             if len(ctx.output_queue) > 0:
                 self._process_model_outputs(ctx=ctx)
             # No outputs in this case
             outputs = []
 
+        print("zazzle vllm/engine/llm_engine.py step rest line_1467")
         # Finish the current step for all the sequence groups.
         if self.scheduler_config.is_multi_step:
             for seq_group in seq_group_metadata_list:

@@ -42,6 +42,7 @@ class Worker(WorkerBase):
         distributed_init_method: str,
         is_driver_worker: bool = False,
     ):
+        print(f"[zazzle debug] Worker PID={os.getpid()}")
         print("zazzle vllm/v1/worker class Worker init line_45")
         super().__init__(vllm_config=vllm_config,
                          local_rank=local_rank,
@@ -194,6 +195,7 @@ class Worker(WorkerBase):
 
     def initialize_from_config(self, kv_cache_config: KVCacheConfig) -> None:
         """Allocate GPU KV cache with the specified kv_cache_config."""
+        print("gpu_worker initialize_from_config line_197")     # When will this happen?
         if self.vllm_config.model_config.enable_sleep_mode:
             allocator = CuMemAllocator.get_instance()
             context = allocator.use_memory_pool(tag="kv_cache")
@@ -243,6 +245,7 @@ class Worker(WorkerBase):
         self,
         scheduler_output: "SchedulerOutput",
     ) -> Optional[ModelRunnerOutput]:
+        print("zazzle vllm/v1/worker/gpu_worker.py execute_model line_247")
         output = self.model_runner.execute_model(scheduler_output)
         return output if self.is_driver_worker else None
 

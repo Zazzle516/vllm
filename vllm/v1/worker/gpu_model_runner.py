@@ -285,7 +285,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
         new/resumed/paused/finished request in the batch.
         """
         # Remove finished requests from the cached states.
+        print("[Debug] zazzle _update_states line_288 scheduler_output.finished_req_ids: ", scheduler_output.finished_req_ids)
         for req_id in scheduler_output.finished_req_ids:
+            print("[Debug] zazzle vllm/v1/worker/gpu_model_runner.py line_290 pop out", req_id)
             self.requests.pop(req_id, None)
             self.encoder_cache.pop(req_id, None)
         # Remove the finished requests from the persistent batch.
@@ -299,6 +301,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             req_index = self.input_batch.remove_request(req_id)
             if req_index is not None:
                 removed_req_indices.append(req_index)
+                print("[Debug] zazzle line_304 removed_req_indices: ", removed_req_indices)
 
         # Free the cached encoder outputs.
         for req_id, input_id in scheduler_output.free_encoder_input_ids:
@@ -382,6 +385,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
 
         # Update the states of the running/resumed requests.
         for req_data in scheduler_output.scheduled_cached_reqs:
+            print("[Debug] zazzle req_data in scheduler_output.scheduled_cached_reqs line_388")
             req_id = req_data.req_id
             req_state = self.requests[req_id]
 
@@ -458,6 +462,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
 
         # Condense the batched states if there are empty indices.
         if removed_req_indices:
+            print("[Debug] zazzle line_464 condense test")
             self.input_batch.condense(removed_req_indices)
 
         # Some attention backends (namely MLA) may want to separate requests
@@ -467,6 +472,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             self.input_batch, scheduler_output)
 
         if batch_changed or batch_reordered:
+            print("[Debug] zazzle line_474 test")
             self.input_batch.refresh_sampling_metadata()
 
     def _prepare_inputs(
@@ -990,6 +996,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
         intermediate_tensors: Optional[IntermediateTensors] = None,
     ) -> Union[ModelRunnerOutput, torch.Tensor]:
         # Update KVConnector with the KVConnector metadata forward().
+        print("zazzle scheduler_output", scheduler_output)
         if has_kv_transfer_group():
             get_kv_transfer_group().bind_connector_metadata(
                 scheduler_output.kv_connector_metadata)
@@ -1044,6 +1051,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             # then the embedding layer is not included in the CUDA graph.
             input_ids = self.input_ids[:num_input_tokens]
             inputs_embeds = None
+
         if self.uses_mrope:
             positions = self.mrope_positions[:, :num_input_tokens]
         else:
@@ -1238,7 +1246,10 @@ class GPUModelRunner(LoRAModelRunnerMixin):
         # Clear KVConnector state after all KVs are generated.
         if has_kv_transfer_group():
             get_kv_transfer_group().clear_connector_metadata()
-
+        print("[Debug] zazzle vllm/v1/worker/gpu_model_runner.py line_1246", self.input_batch.req_id_to_index)
+        print("[Debug] zazzle req_ids: ", self.input_batch.req_ids)
+        print("[Debug] zazzle logprobs_lists: ", logprobs_lists)
+        print("[Debug] zazzle prompt_logprobs_dict: ", prompt_logprobs_dict)
         return ModelRunnerOutput(
             req_ids=self.input_batch.req_ids,
             req_id_to_index=self.input_batch.req_id_to_index,

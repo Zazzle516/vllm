@@ -26,6 +26,7 @@ from vllm.v1.structured_output.backend_xgrammar import (
     validate_xgrammar_grammar)
 
 
+# 将用户输入（如文本、多模态数据）转化为适合传入模型的格式
 class Processor:
 
     def __init__(
@@ -44,11 +45,11 @@ class Processor:
 
         self.generation_config_fields = (
             self.model_config.try_get_generation_config())
-        self.input_preprocessor = InputPreprocessor(self.model_config,
+        self.input_preprocessor = InputPreprocessor(self.model_config,              # 处理 LLM 输入输出的一些方法
                                                     self.tokenizer,
                                                     mm_registry)
 
-        self.mm_input_cache_client = MirroredProcessingCache(self.model_config)
+        self.mm_input_cache_client = MirroredProcessingCache(self.model_config)     # 获取缓存映射表
 
         # Multi-modal hasher (for images)
         self.use_hash = (

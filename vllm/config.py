@@ -1152,7 +1152,7 @@ class ModelConfig:
 
     def try_get_generation_config(self) -> dict[str, Any]:
         if self.generation_config in ("auto", "vllm"):
-            config = try_get_generation_config(
+            config = try_get_generation_config(                     # bos_token_id / eos_token_id
                 self.hf_config_path or self.model,
                 trust_remote_code=self.trust_remote_code,
                 revision=self.revision,
@@ -1166,7 +1166,7 @@ class ModelConfig:
         if config is None:
             return {}
 
-        return config.to_diff_dict()
+        return config.to_diff_dict()                                # 返回与默认 GenerationConfig 相比，被“显式修改过的参数”的字典
 
     def get_diff_sampling_param(self) -> dict[str, Any]:
         """

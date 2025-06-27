@@ -192,7 +192,7 @@ class EngineCore:
 
     def step(self) -> EngineCoreOutputs:
         """Schedule, execute, and make output."""
-
+        print("zazzle vllm/v1/engine/core.py step line_195")
         # Check for any requests remaining in the scheduler - unfinished,
         # or finished and not yet removed from the batch.
         if not self.scheduler.has_requests():
@@ -324,7 +324,7 @@ class EngineCoreProc(EngineCore):
 
         super().__init__(vllm_config, executor_class, log_stats,
                          executor_fail_callback)
-
+        print("zazzle line_327")
         self.step_fn = (self.step if self.batch_queue is None else
                         self.step_with_batch_queue)
         self.global_unfinished_reqs = False

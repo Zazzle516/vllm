@@ -165,7 +165,7 @@ class Scheduler(SchedulerInterface):
         scheduled_spec_decode_tokens: dict[str, list[int]] = {}
 
         # For logging.
-        print("zazzle scheduler v1 init logging start line_168")    # 启动了 18 次  Q: 目前不知道启动的次数和什么有关
+        print("zazzle scheduler v1 init logging start line_168")
         scheduled_timestamp = time.monotonic()
 
         # First, schedule the RUNNING requests.
@@ -617,6 +617,7 @@ class Scheduler(SchedulerInterface):
         logprobs = model_runner_output.logprobs
         prompt_logprobs_dict = model_runner_output.prompt_logprobs_dict
         num_scheduled_tokens = scheduler_output.num_scheduled_tokens
+        print("[Debug] zazzle vllm/v1/core/sched/scheduler.py line_620 num_scheduled_tokens:", num_scheduled_tokens)
 
         new_running: list[Request] = []
         outputs: list[EngineCoreOutput] = []

@@ -8,9 +8,9 @@ print("zazzle after import start SamplingParams")
 # Sample prompts.
 prompts = [
     "Hello, my name is",
-    "The president of the United States is",
-    "The capital of France is",
-    "The future of AI is",
+    # "The president of the United States is",
+    # "The capital of France is",
+    # "The future of AI is",
 ]
 # Create a sampling params object.
 sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
@@ -19,7 +19,7 @@ print("zazzle after Sampling_params begine main")
 def main():
     # Create an LLM.
     print("zazzle after main begine LLM")
-    llm = LLM(model="/home/ubuntuhx/xirui.hao/Models/deepseek-1.5B/DeepSeek-R1-Distill-Qwen-1.5B", dtype="bfloat16", swap_space=0)
+    llm = LLM(model="/home/ubuntuhx/xirui.hao/Models/deepseek-1.5B/DeepSeek-R1-Distill-Qwen-1.5B", dtype="bfloat16", tensor_parallel_size=1)
     # Generate texts from the prompts.
     # The output is a list of RequestOutput objects
     # that contain the prompt, generated text, and other information.

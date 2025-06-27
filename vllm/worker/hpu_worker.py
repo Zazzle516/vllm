@@ -34,6 +34,7 @@ from vllm.worker.worker_base import (LocalOrDistributedWorkerBase, WorkerBase,
 logger = init_logger(__name__)
 
 
+# 每个 HPUWorker 绑定一块 HPU
 class HPUWorker(LocalOrDistributedWorkerBase):
     """A worker class that executes (a partition of) the model on a HPU.
 
@@ -51,7 +52,7 @@ class HPUWorker(LocalOrDistributedWorkerBase):
         is_driver_worker: bool = False,
         model_runner_cls: Optional[Type[ModelRunnerBase]] = None,
     ) -> None:
-        WorkerBase.__init__(self, vllm_config=vllm_config)
+        WorkerBase.__init__(self, vllm_config=vllm_config)                      # Q1: WorkerBase 在哪
         self.parallel_config.rank = rank
         self.local_rank = local_rank
         self.rank = rank

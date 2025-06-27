@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from typing import Optional
 
-from vllm.envs import VLLM_MM_INPUT_CACHE_GIB
+from vllm.envs import VLLM_MM_INPUT_CACHE_GIB               # 8G
 from vllm.multimodal import MultiModalKwargs
 from vllm.multimodal.processing import ProcessingCache
 from vllm.utils import is_list_of
@@ -28,6 +28,14 @@ from vllm.utils import is_list_of
 # Both Client and Server must use the same cache size
 # (to perform mirrored caching). This cache size is set by the environment
 # variable VLLM_MM_INPUT_CACHE_GIB.
+
+# Server 接收 Client 预处理后的内容执行  如果没有缓存那么每次 Server 都要等待 Client
+# 但是这些内容是会重复的
+# 所以 Server 和 Client 需要 MirroredProcessingCache 和 mm_hash 来表示一个输入是否已经处理过了
+# 以及这个输入是否和之前已经处理过的内容完全相同
+
+# 具体怎么应用缓存: 用 LRUCache 包裹 mm_hash  对这个映射表的内容应用 LRU 策略
+# 保证缓存表的大小范围，这样 Client 和 Server 是基于 LRU 的策略去利用 mm_hash
 
 
 class MirroredProcessingCache:

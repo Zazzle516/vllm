@@ -751,6 +751,7 @@ def try_get_generation_config(
     revision: Optional[str] = None,
 ) -> Optional[GenerationConfig]:
     try:
+        # 尝试使用 Transformers 的标准 API 加载 generation_config.json 配置文件
         return GenerationConfig.from_pretrained(
             model,
             revision=revision,
